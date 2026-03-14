@@ -1,10 +1,11 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, Lightbulb, TrendingUp,
   BookOpen, FileText, Settings, ChevronLeft, ChevronRight,
   Zap, LogOut,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
+import { useAuth } from '../../context/AuthContext';
 
 const NAV = [
   { to: '/dashboard',       label: 'Dashboard',       Icon: LayoutDashboard },
@@ -18,8 +19,15 @@ const NAV = [
 
 export default function Sidebar({ mobile = false, onClose }) {
   const { collapsed, toggle } = useSidebar();
+  const { logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const col = mobile ? false : collapsed;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/sign-in', { replace: true });
+  };
 
   return (
     <aside
@@ -95,7 +103,10 @@ export default function Sidebar({ mobile = false, onClose }) {
             <ChevronRight style={{width:16,height:16}} />
           </button>
         )}
-        <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all ${col && !mobile ? 'justify-center px-2' : ''}`}>
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all ${col && !mobile ? 'justify-center px-2' : ''}`}
+        >
           <LogOut style={{width:16,height:16}} className="flex-shrink-0" />
           {(!col || mobile) && <span>Sign Out</span>}
         </button>
