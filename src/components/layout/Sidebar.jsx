@@ -2,10 +2,9 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ClipboardList, Lightbulb, TrendingUp,
   BookOpen, FileText, Settings, ChevronLeft, ChevronRight,
-  Zap, LogOut, Bell,
+  Zap, LogOut,
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
-import { student } from '../../data/mockData';
 
 const NAV = [
   { to: '/dashboard',       label: 'Dashboard',       Icon: LayoutDashboard },
@@ -39,32 +38,6 @@ export default function Sidebar({ mobile = false, onClose }) {
           </div>
         )}
       </div>
-
-      {/* User Card */}
-      {(!col || mobile) && (
-        <div className="mx-3 my-4 bg-slate-700/40 rounded-xl p-3 border border-slate-600/30">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {student.initials}
-            </div>
-            <div className="min-w-0">
-              <p className="text-white font-semibold text-sm truncate">{student.name}</p>
-              <p className="text-slate-400 text-xs truncate">{student.id}</p>
-            </div>
-          </div>
-          <span className="mt-2.5 inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-            {student.year}
-          </span>
-        </div>
-      )}
-      {col && !mobile && (
-        <div className="flex justify-center my-4">
-          <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-            {student.initials}
-          </div>
-        </div>
-      )}
 
       {/* Nav */}
       <nav className="flex-1 px-2 overflow-y-auto">
