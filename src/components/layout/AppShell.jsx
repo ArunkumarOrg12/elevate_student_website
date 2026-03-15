@@ -1,11 +1,17 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileDrawer from './MobileDrawer';
 import { useSidebar } from '../../context/SidebarContext';
 
 export default function AppShell() {
-  const { collapsed } = useSidebar();
+  useSidebar();
+  const { pathname } = useLocation();
+  const isAssessmentFlow = pathname.startsWith('/assessment/');
+
+  if (isAssessmentFlow) {
+    return <Outlet />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8FAFC]">

@@ -304,6 +304,52 @@ export const proTips = {
 };
 
 // ──────────────────────────────────────────────────────────────
+// Assessment Flow — Exam Configs & Questions
+// ──────────────────────────────────────────────────────────────
+export const examConfigs = {
+  'CS-FINAL-2025': {
+    title: 'Quantitative Aptitude Assessment',
+    description: 'Test your quantitative reasoning, numerical ability, and logical thinking skills',
+    category: 'Aptitude',
+    duration: 30,
+    totalQuestions: 20,
+    topics: ['Quantitative Reasoning', 'Logical Reasoning', 'Data Interpretation'],
+    instructions: [
+      'Read each question carefully before answering',
+      'You can flag questions to review later',
+      'Timer will start once you begin the assessment',
+      'Assessment will auto-submit when time expires',
+      'You can navigate between questions anytime',
+    ],
+  },
+};
+
+export const examQuestions = {
+  'CS-FINAL-2025': [
+    { id: 1,  topic: 'Quantitative Reasoning', difficulty: 'easy',   question: 'If the sum of three consecutive even numbers is 78, what is the largest number?',                                                                         options: ['24', '26', '28', '30'],                                              correctAnswer: 2 },
+    { id: 2,  topic: 'Quantitative Reasoning', difficulty: 'medium', question: 'A train travels 360 km in 4 hours. If its speed is increased by 20 km/h, how long will it take to cover the same distance?',                               options: ['2.5 hours', '3 hours', '3.27 hours', '3.5 hours'],                  correctAnswer: 2 },
+    { id: 3,  topic: 'Logical Reasoning',      difficulty: 'easy',   question: 'Complete the series: 2, 6, 12, 20, 30, ?',                                                                                                                    options: ['40', '42', '44', '46'],                                              correctAnswer: 1 },
+    { id: 4,  topic: 'Logical Reasoning',      difficulty: 'medium', question: 'If APPLE is coded as 50, BANANA is coded as 42, what is CHERRY coded as?',                                                                                   options: ['58', '62', '66', '70'],                                              correctAnswer: 2 },
+    { id: 5,  topic: 'Data Interpretation',    difficulty: 'easy',   question: "A company's revenue grew from ₹40L to ₹52L. What is the percentage increase?",                                                                              options: ['25%', '28%', '30%', '32%'],                                          correctAnswer: 2 },
+    { id: 6,  topic: 'Quantitative Reasoning', difficulty: 'hard',   question: 'The average of 5 numbers is 27. If one number is excluded, the average becomes 25. What is the excluded number?',                                           options: ['30', '32', '35', '37'],                                              correctAnswer: 2 },
+    { id: 7,  topic: 'Quantitative Reasoning', difficulty: 'medium', question: 'A shopkeeper bought an item for ₹800 and wants 25% profit. What should be the selling price?',                                                              options: ['₹980', '₹1000', '₹1050', '₹1100'],                                  correctAnswer: 1 },
+    { id: 8,  topic: 'Data Interpretation',    difficulty: 'medium', question: 'In a pie chart, sector A is 72°, sector B is 108°. What is the ratio of A to B?',                                                                           options: ['1:2', '2:3', '3:4', '1:3'],                                         correctAnswer: 1 },
+    { id: 9,  topic: 'Logical Reasoning',      difficulty: 'hard',   question: 'If all Zips are Zaps, and some Zaps are Zops, which must be true?',                                                                                          options: ['All Zips are Zops', 'Some Zips may be Zops', 'No Zips are Zops', 'All Zops are Zips'], correctAnswer: 1 },
+    { id: 10, topic: 'Quantitative Reasoning', difficulty: 'easy',   question: 'What is 15% of 240?',                                                                                                                                        options: ['32', '34', '36', '38'],                                              correctAnswer: 2 },
+    { id: 11, topic: 'Data Interpretation',    difficulty: 'hard',   question: 'A bar graph shows sales of 120, 150, 90, 180 units in Q1–Q4. What percentage of total sales occurred in Q4?',                                               options: ['28.5%', '30%', '33.3%', '36%'],                                     correctAnswer: 2 },
+    { id: 12, topic: 'Logical Reasoning',      difficulty: 'medium', question: 'Statement: All engineers are problem solvers. Some problem solvers are creative. Conclusion: Some engineers are creative.',                                  options: ['Definitely true', 'Probably true', 'Probably false', 'Does not follow'], correctAnswer: 3 },
+    { id: 13, topic: 'Quantitative Reasoning', difficulty: 'medium', question: 'A shopkeeper marks up goods by 40% and offers a 15% discount. What is the profit percentage?',                                                              options: ['15%', '17%', '19%', '21%'],                                         correctAnswer: 2 },
+    { id: 14, topic: 'Quantitative Reasoning', difficulty: 'hard',   question: 'Two pipes fill a tank in 12 and 18 hours respectively. A drain empties it in 36 hours. How long to fill from empty with all three open?',                  options: ['7.2 hours', '8 hours', '9 hours', '10.8 hours'],                    correctAnswer: 2 },
+    { id: 15, topic: 'Data Interpretation',    difficulty: 'easy',   question: 'If a table shows population growth of 5%, 8%, 3%, 10% over four years, what is the total approximate growth?',                                              options: ['26%', '28.5%', '24%', '30%'],                                       correctAnswer: 1 },
+    { id: 16, topic: 'Logical Reasoning',      difficulty: 'easy',   question: 'Find the odd one out: 3, 5, 11, 14, 17, 23',                                                                                                                 options: ['5', '11', '14', '17'],                                               correctAnswer: 2 },
+    { id: 17, topic: 'Quantitative Reasoning', difficulty: 'medium', question: 'A sum of ₹5000 is invested at 8% simple interest. What is the amount after 3 years?',                                                                       options: ['₹5800', '₹6000', '₹6200', '₹6400'],                                correctAnswer: 2 },
+    { id: 18, topic: 'Data Interpretation',    difficulty: 'medium', question: 'A line graph shows temperatures of 22°C, 28°C, 25°C, 31°C, 27°C for Mon–Fri. What is the average?',                                                        options: ['26.2°C', '26.6°C', '27.0°C', '27.4°C'],                            correctAnswer: 1 },
+    { id: 19, topic: 'Logical Reasoning',      difficulty: 'hard',   question: 'In a certain code, MOUSE is written as PRXVH. How is CHAIR written?',                                                                                        options: ['FKDLU', 'FKDLQ', 'EKDLU', 'FKCLU'],                                 correctAnswer: 0 },
+    { id: 20, topic: 'Quantitative Reasoning', difficulty: 'easy',   question: 'If x + y = 10 and x − y = 4, what is the value of x?',                                                                                                       options: ['5', '6', '7', '8'],                                                  correctAnswer: 2 },
+  ],
+};
+
+// ──────────────────────────────────────────────────────────────
 // Reports
 // ──────────────────────────────────────────────────────────────
 export const reportSections = [

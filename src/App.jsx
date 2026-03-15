@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SidebarProvider } from './context/SidebarContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AssessmentFlowProvider } from './context/AssessmentFlowContext';
 import AppShell from './components/layout/AppShell';
 import Dashboard from './pages/Dashboard';
 import MyAssessments from './pages/MyAssessments';
@@ -10,6 +11,11 @@ import Recommendations from './pages/Recommendations';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import SignIn from './pages/SignIn';
+import AssessmentRegister from './pages/AssessmentRegister';
+import AssessmentOverview from './pages/AssessmentOverview';
+import AssessmentSecurityCheck from './pages/AssessmentSecurityCheck';
+import AssessmentExam from './pages/AssessmentExam';
+import AssessmentComplete from './pages/AssessmentComplete';
 
 // Blocks unauthenticated access; shows nothing while session restore is in-flight
 function ProtectedRoute({ children }) {
@@ -44,6 +50,13 @@ export default function App() {
             <Route path="recommendations" element={<Recommendations />} />
             <Route path="reports"         element={<Reports />} />
             <Route path="settings"        element={<Settings />} />
+            <Route path="assessment" element={<AssessmentFlowProvider />}>
+              <Route path="register"       element={<AssessmentRegister />} />
+              <Route path="overview"       element={<AssessmentOverview />} />
+              <Route path="security-check" element={<AssessmentSecurityCheck />} />
+              <Route path="exam"           element={<AssessmentExam />} />
+              <Route path="complete"       element={<AssessmentComplete />} />
+            </Route>
           </Route>
         </Routes>
       </AuthProvider>
