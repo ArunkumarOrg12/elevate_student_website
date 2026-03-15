@@ -124,24 +124,50 @@ function _dragHandler(e) { e.preventDefault(); }
 // ─── Screenshot Block ─────────────────────────────────────────
 let _ssCb = null;
 
-function _ssHandler(e) {
+// keydown — catches PrintScreen on most browsers + Win+Shift+S when browser receives it
+function _ssKeydownHandler(e) {
   const isPrtSc = e.key === 'PrintScreen' || e.code === 'PrintScreen';
-  // Win+Shift+S (Snipping Tool)
-  const isSnip  = e.shiftKey && (e.metaKey || e.getModifierState?.('Meta')) && e.key?.toLowerCase() === 's';
+  // Win+Shift+S: Windows key = metaKey OR getModifierState('Meta'|'OS')
+  const hasWinKey = e.metaKey
+    || e.getModifierState?.('Meta')
+    || e.getModifierState?.('OS');
+  const isSnip = e.shiftKey && hasWinKey && e.key?.toLowerCase() === 's';
+
   if (isPrtSc || isSnip) {
     e.preventDefault();
     e.stopPropagation();
+    // Overwrite clipboard so the captured image is replaced with nothing
+    navigator.clipboard?.writeText('').catch(() => {});
     _ssCb?.(isPrtSc ? 'PrintScreen' : 'Win+Shift+S (Snipping Tool)');
   }
 }
 
+// keyup — catches PrintScreen on browsers that only fire it on keyup (Firefox, some Chrome builds)
+function _ssKeyupHandler(e) {
+  if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+    e.preventDefault();
+    navigator.clipboard?.writeText('').catch(() => {});
+    _ssCb?.('PrintScreen');
+  }
+}
+
+// focus blur — when Win+Shift+S activates the Snipping Tool overlay it steals window focus;
+// the browser fires window blur even though the OS never sent a keydown to us
+function _ssBlurHandler() {
+  _ssCb?.('Win+Shift+S (Snipping Tool)');
+}
+
 export function installScreenBlock(onBlock) {
   _ssCb = onBlock || null;
-  document.addEventListener('keydown', _ssHandler, true);
+  document.addEventListener('keydown', _ssKeydownHandler, true);
+  document.addEventListener('keyup',   _ssKeyupHandler,   true);
+  window.addEventListener('blur', _ssBlurHandler);
 }
 
 export function removeScreenBlock() {
-  document.removeEventListener('keydown', _ssHandler, true);
+  document.removeEventListener('keydown', _ssKeydownHandler, true);
+  document.removeEventListener('keyup',   _ssKeyupHandler,   true);
+  window.removeEventListener('blur', _ssBlurHandler);
   _ssCb = null;
 }
 

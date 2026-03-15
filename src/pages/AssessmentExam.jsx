@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Flag, ChevronLeft, ChevronRight, Timer, Maximize,
@@ -79,6 +79,38 @@ export default function AssessmentExam() {
       navigate('/assessment/register');
     }
   }, []);
+
+  // ── watermark tile (canvas → data-URL, repeated as CSS background) ──
+  const watermarkStyle = useMemo(() => {
+    const name = flow.fullName  || 'Student';
+    const sid  = flow.studentId || '';
+    const code = flow.examCode  || '';
+    const fp   = flow.fingerprint || '';
+
+    const W = 420, H = 140;
+    const canvas = document.createElement('canvas');
+    canvas.width  = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(-Math.PI / 7);
+    ctx.globalAlpha = 0.055;
+    ctx.fillStyle = '#0F172A';
+    ctx.font = 'bold 13px "DM Sans", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${name}  ·  ${sid}`, 0, -8);
+    ctx.font = '11px monospace';
+    ctx.fillText(`${code}  ·  ${fp}`, 0, 12);
+    ctx.restore();
+    return {
+      position: 'fixed', inset: 0,
+      zIndex: 46, pointerEvents: 'none',
+      backgroundImage: `url(${canvas.toDataURL()})`,
+      backgroundRepeat: 'repeat',
+    };
+  }, [flow.fullName, flow.studentId, flow.examCode, flow.fingerprint]);
 
   if (!flow.examConfig || !flow.startTime) return null;
 
@@ -177,24 +209,51 @@ export default function AssessmentExam() {
     return () => ['copy', 'cut', 'paste'].forEach(ev => document.removeEventListener(ev, block));
   }, []);
 
-  // ── screenshot callback (re-install with local handler) ──
+  // ── screenshot detection (keydown + keyup + blur) ──
   useEffect(() => {
-    function ssHandler(e) {
+    function blackout() {
+      const div = document.createElement('div');
+      div.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;pointer-events:none;';
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 800);
+    }
+
+    function onKeydown(e) {
       const isPrtSc = e.key === 'PrintScreen' || e.code === 'PrintScreen';
-      const isSnip  = e.shiftKey && (e.metaKey || e.getModifierState?.('Meta')) && e.key?.toLowerCase() === 's';
+      const hasWinKey = e.metaKey || e.getModifierState?.('Meta') || e.getModifierState?.('OS');
+      const isSnip = e.shiftKey && hasWinKey && e.key?.toLowerCase() === 's';
       if (isPrtSc || isSnip) {
         e.preventDefault();
         e.stopPropagation();
+        navigator.clipboard?.writeText('').catch(() => {});
         triggerViolation('screenshot');
-        // Blackout screen briefly
-        const div = document.createElement('div');
-        div.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;pointer-events:none;';
-        document.body.appendChild(div);
-        setTimeout(() => div.remove(), 800);
+        blackout();
       }
     }
-    document.addEventListener('keydown', ssHandler, true);
-    return () => document.removeEventListener('keydown', ssHandler, true);
+
+    // Firefox / some Chrome builds only fire PrintScreen on keyup
+    function onKeyup(e) {
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        e.preventDefault();
+        navigator.clipboard?.writeText('').catch(() => {});
+        triggerViolation('screenshot');
+        blackout();
+      }
+    }
+
+    // Win+Shift+S opens Snipping Tool overlay which steals window focus
+    function onBlur() {
+      if (!terminatedRef.current) triggerViolation('screenshot');
+    }
+
+    document.addEventListener('keydown', onKeydown, true);
+    document.addEventListener('keyup',   onKeyup,   true);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      document.removeEventListener('keydown', onKeydown, true);
+      document.removeEventListener('keyup',   onKeyup,   true);
+      window.removeEventListener('blur', onBlur);
+    };
   }, []);
 
   // ── violation logic ──
@@ -251,6 +310,9 @@ export default function AssessmentExam() {
 
   return (
     <div className="fixed inset-0 bg-[#F8FAFC] flex flex-col" style={{ zIndex: 50 }}>
+      {/* ── Identity Watermark ───────────────────────────────── */}
+      <div style={watermarkStyle} aria-hidden="true" />
+
       <style>{`
         @keyframes modalIn {
           from { opacity:0; transform: scale(0.94) translateY(10px); }
