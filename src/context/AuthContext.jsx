@@ -2,8 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import axios from 'axios';
 import { setAuthToken } from '../services/api';
 import api from '../services/api';
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { BASE_URL, AUTH_URLS } from '../constants/apiUrlConstant';
 
 const AuthContext = createContext(null);
 
@@ -39,7 +38,7 @@ export function AuthProvider({ children }) {
       }
       try {
         const { data } = await axios.post(
-          `${BASE_URL}/api/v1/auth/refresh-token`,
+          `${BASE_URL}${AUTH_URLS.REFRESH_TOKEN}`,
           {},
           { withCredentials: true },
         );
@@ -60,7 +59,7 @@ export function AuthProvider({ children }) {
   // ── Login ──────────────────────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
     // api.post goes through the interceptor → returns res.data directly
-    const res = await api.post('/api/v1/auth/student-login', { email, password });
+    const res = await api.post(AUTH_URLS.STUDENT_LOGIN, { email, password });
     setAuthToken(res.accessToken);
     setUser(res.user);
     try { localStorage.setItem(USER_KEY, JSON.stringify(res.user)); } catch {}
@@ -69,7 +68,7 @@ export function AuthProvider({ children }) {
 
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
-    try { await api.post('/api/v1/auth/logout'); } catch {}
+    try { await api.post(AUTH_URLS.LOGOUT); } catch {}
     setAuthToken(null);
     setUser(null);
     try { localStorage.removeItem(USER_KEY); } catch {}

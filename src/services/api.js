@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { BASE_URL, AUTH_URLS } from '../constants/apiUrlConstant';
 
 // ── In-memory access token ────────────────────────────────────────────────────
 // Kept in a module-level variable so it survives re-renders but is invisible
@@ -10,8 +11,6 @@ let _refreshQueue = []; // { resolve, reject }[] — requests queued during refr
 export function setAuthToken(token) {
   _accessToken = token;
 }
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 // ── Axios instance ────────────────────────────────────────────────────────────
 const api = axios.create({
@@ -37,8 +36,8 @@ api.interceptors.response.use(
     const orig = err.config;
     const is401 = err.response?.status === 401;
     const isAuthEndpoint =
-      orig.url?.includes('/auth/refresh-token') ||
-      orig.url?.includes('/auth/student-login');
+      orig.url?.includes(AUTH_URLS.REFRESH_TOKEN) ||
+      orig.url?.includes(AUTH_URLS.STUDENT_LOGIN);
 
     if (is401 && !orig._retry && !isAuthEndpoint) {
       // ── Queue subsequent 401s while a refresh is in-flight ──────────────
@@ -57,7 +56,7 @@ api.interceptors.response.use(
       try {
         // Use raw axios so this call doesn't go through our interceptor again
         const { data } = await axios.post(
-          `${BASE_URL}/api/v1/auth/refresh-token`,
+          `${BASE_URL}${AUTH_URLS.REFRESH_TOKEN}`,
           {},
           { withCredentials: true },
         );
@@ -83,23 +82,5 @@ api.interceptors.response.use(
     return Promise.reject(err);
   },
 );
-
-// ── Auth endpoints ────────────────────────────────────────────────────────────
-export const authAPI = {
-  studentLogin: body => api.post('/api/v1/auth/student-login', body),
-  logout:       ()   => api.post('/api/v1/auth/logout'),
-  refresh:      ()   => api.post('/api/v1/auth/refresh-token'),
-};
-
-// ── Student data endpoints ────────────────────────────────────────────────────
-export const studentAPI = {
-  getProfile:         () => api.get('/api/v1/student/profile'),
-  getDashboard:       () => api.get('/api/v1/student/dashboard'),
-  getAssessments:     () => api.get('/api/v1/student/assessments'),
-  getSkills:          () => api.get('/api/v1/student/skills'),
-  getGrowth:          () => api.get('/api/v1/student/growth'),
-  getRecommendations: () => api.get('/api/v1/student/recommendations'),
-  getReports:         () => api.get('/api/v1/student/reports'),
-};
 
 export default api;

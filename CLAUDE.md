@@ -27,6 +27,7 @@ land placement opportunities.
 | Charts | Recharts v3 |
 | Icons | lucide-react |
 | HTTP client | axios (configured in `src/services/api.js`) |
+| Data fetching | TanStack Query v5 (`@tanstack/react-query`) |
 | Build | Vite 8 |
 | State | Local `useState` / Context API (`SidebarContext`) — no Redux currently |
 
@@ -37,8 +38,21 @@ land placement opportunities.
 ```
 src/
 ├── App.jsx                   # Routes: /sign-in (public), /* (AppShell protected)
-├── main.jsx                  # Entry point
+├── main.jsx                  # Entry point — wraps app in QueryClientProvider
 ├── index.css                 # Tailwind base + shared utilities / animations
+│
+├── constants/
+│   └── apiUrlConstant.js     # ALL API URL strings + TanStack Query cache keys (QUERY_KEYS)
+│
+├── controllers/              # One file per domain — export TanStack Query hooks
+│   ├── authController.js     # useLogin, useLogout, useRefreshToken (useMutation)
+│   ├── profileController.js  # useProfile (useQuery)
+│   ├── dashboardController.js       # useDashboard (useQuery)
+│   ├── assessmentsController.js     # useAssessments (useQuery)
+│   ├── skillsController.js          # useSkills (useQuery)
+│   ├── growthController.js          # useGrowth (useQuery)
+│   ├── recommendationsController.js # useRecommendations (useQuery)
+│   └── reportsController.js         # useReports (useQuery)
 │
 ├── pages/                    # One file per route
 │   ├── SignIn.jsx
@@ -62,13 +76,14 @@ src/
 │   └── settings/             # SettingsSidebar, ProfileForm
 │
 ├── context/
+│   ├── AuthContext.jsx       # Login/logout, token management
 │   └── SidebarContext.jsx    # Collapsed state for desktop sidebar
 │
 ├── data/
 │   └── mockData.js           # All static data — single source of truth
 │
 ├── services/
-│   └── api.js                # axios instance, Bearer token interceptor, studentAPI endpoints
+│   └── api.js                # axios instance only — Bearer token interceptor + silent refresh on 401
 │
 └── utils/
     └── helpers.js
@@ -92,6 +107,53 @@ src/
 
 Protected routes are nested inside `<AppShell />` which renders `<Sidebar>` + `<Header>` + `<Outlet>`.
 New public pages (e.g. sign-up, forgot-password) must be added **outside** the AppShell route, same as `/sign-in`.
+
+---
+
+## API Layer Architecture
+
+### `src/constants/apiUrlConstant.js`
+Single source of truth for every URL string and TanStack Query cache key.
+**Never hardcode API paths anywhere else.**
+
+```js
+BASE_URL          // from VITE_API_BASE_URL env var, defaults to http://localhost:4000
+AUTH_URLS.*       // STUDENT_LOGIN, LOGOUT, REFRESH_TOKEN
+STUDENT_URLS.*    // PROFILE, DASHBOARD, ASSESSMENTS, SKILLS, GROWTH, RECOMMENDATIONS, REPORTS
+QUERY_KEYS.*      // cache key arrays for each resource
+```
+
+### `src/services/api.js`
+Axios instance only — no endpoint functions.
+- Attaches Bearer token from in-memory `_accessToken` on every request
+- Unwraps `res.data` in the response interceptor
+- Silent token refresh on 401 (queues concurrent requests, redirects to `/sign-in` on failure)
+- Imports all URL constants from `apiUrlConstant.js`
+
+### `src/controllers/`
+One file per domain. Each file imports `api` + URL constants and exports custom hooks.
+
+- **Queries** (`useQuery`): `useProfile`, `useDashboard`, `useAssessments`, `useSkills`, `useGrowth`, `useRecommendations`, `useReports`
+- **Mutations** (`useMutation`): `useLogin`, `useLogout`, `useRefreshToken`
+
+**Usage pattern in pages:**
+```jsx
+import { useAssessments } from '../controllers/assessmentsController';
+
+export default function MyAssessments() {
+  const { data, isLoading, isError } = useAssessments();
+  if (isLoading) return <div>Loading…</div>;
+  const assessments = data?.assessments ?? [];
+  // …
+}
+```
+
+### TanStack Query config (`src/main.jsx`)
+```js
+new QueryClient({
+  defaultOptions: { queries: { staleTime: 1000 * 60 * 5, retry: 1 } }
+})
+```
 
 ---
 
@@ -173,21 +235,12 @@ shadow-card-hover → deeper on hover
 1. **One default export per file.** No named component exports.
 2. **Props over context** for leaf components. Only `SidebarContext` is global.
 3. **Data comes from `src/data/mockData.js`** — import named exports directly. Do not inline mock data inside components.
-4. **Charts:** Use Recharts. Wrap in a `ResponsiveContainer`. Tooltip styles follow the `.recharts-tooltip-wrapper` rule in `index.css`.
-5. **Icons:** lucide-react only. Pass `style={{ width: N, height: N }}` when overriding Tailwind icon sizes.
-6. **Animations:** CSS-only (`@keyframes` in `index.css` or scoped `<style>` tags). Use `animationDelay` + `animationFillMode: 'both'` for stagger effects. No external animation libraries.
-7. **Inline `<style>` tags** are acceptable inside page-level components (e.g. `SignIn.jsx`) for page-specific styles that don't belong in the global stylesheet.
-8. **No TypeScript.** Keep everything in `.jsx` / `.js`.
-
----
-
-## API Layer (`src/services/api.js`)
-
-- Base URL: `VITE_API_BASE_URL` env var, defaults to `http://localhost:8000`
-- Auth: Bearer token stored in `localStorage` under key `token`
-- All endpoints are under `/api/student/…`
-- The `api` instance returns `res.data` directly (response interceptor)
-- Available endpoints: `getProfile`, `getDashboard`, `getAssessments`, `getSkills`, `getGrowth`, `getRecommendations`, `getReports`
+4. **Real API data** comes from controller hooks — never call `api` directly from a component or page.
+5. **Charts:** Use Recharts. Wrap in a `ResponsiveContainer`. Tooltip styles follow the `.recharts-tooltip-wrapper` rule in `index.css`.
+6. **Icons:** lucide-react only. Pass `style={{ width: N, height: N }}` when overriding Tailwind icon sizes.
+7. **Animations:** CSS-only (`@keyframes` in `index.css` or scoped `<style>` tags). Use `animationDelay` + `animationFillMode: 'both'` for stagger effects. No external animation libraries.
+8. **Inline `<style>` tags** are acceptable inside page-level components (e.g. `SignIn.jsx`) for page-specific styles that don't belong in the global stylesheet.
+9. **No TypeScript.** Keep everything in `.jsx` / `.js`.
 
 ---
 
@@ -215,8 +268,12 @@ shadow-card-hover → deeper on hover
 - Reuse `.card`, `.btn-primary`, `.btn-secondary` from `index.css`.
 - Import all mock data from `src/data/mockData.js`.
 - Use `page-enter` class on the root div of every page component.
+- Add all new API URLs to `src/constants/apiUrlConstant.js` — never hardcode paths elsewhere.
+- Add all new API calls as a hook in the appropriate `src/controllers/` file.
 
 ### Don't
+- Don't call `api` (axios) directly from components or pages — always go through a controller hook.
+- Don't add new URL strings outside `apiUrlConstant.js`.
 - Don't add Redux or Zustand — state is local or Context.
 - Don't introduce new third-party UI libraries (no shadcn, MUI, Chakra, etc.).
 - Don't add TypeScript or change file extensions to `.tsx`.
@@ -237,5 +294,5 @@ npm run preview  # Preview production build
 
 Environment variable (optional):
 ```
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:4000
 ```
