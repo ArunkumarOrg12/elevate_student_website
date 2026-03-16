@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Edit2, Info } from 'lucide-react';
 import { student } from '../../data/mockData';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const FIELDS = [
   { label: 'Full Name',             key: 'name',    editable: true  },
@@ -28,28 +31,35 @@ export default function ProfileForm() {
     <div className="card p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-display font-semibold text-base text-gray-800">Profile Information</h3>
-        <button
+        <Button
+          variant={editing ? 'default' : 'secondary'}
+          size="sm"
           onClick={() => setEditing(e => !e)}
-          className={editing ? 'btn-primary' : 'btn-secondary'}
         >
           <Edit2 className="w-3.5 h-3.5" />
           {editing ? 'Save Changes' : 'Edit Profile'}
-        </button>
+        </Button>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-5">
         {FIELDS.map(f => (
-          <div key={f.key}>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">{f.label}</label>
+          <div key={f.key} className="flex flex-col gap-1.5">
+            <Label htmlFor={f.key}>{f.label}</Label>
             {editing && f.editable ? (
-              <input
+              <Input
+                id={f.key}
                 type="text"
                 value={form[f.key]}
                 onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
               />
             ) : (
-              <div className={`px-3 py-2.5 rounded-xl text-sm ${f.editable ? 'bg-gray-50 text-gray-800 border border-gray-100' : 'bg-gray-100 text-gray-500 border border-transparent'}`}>
+              <div
+                className={`px-3 py-2.5 rounded-xl text-sm ${
+                  f.editable
+                    ? 'bg-gray-50 text-gray-800 border border-gray-100'
+                    : 'bg-gray-100 text-gray-500 border border-transparent'
+                }`}
+              >
                 {form[f.key]}
               </div>
             )}
