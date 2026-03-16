@@ -1,9 +1,12 @@
 import { ArrowUpRight } from 'lucide-react';
-import { improvementActions } from '../../data/mockData';
+import { improvementActions as mockActions } from '../../data/mockData';
 import CategoryBadge from '../common/CategoryBadge';
 import PriorityBadge from '../common/PriorityBadge';
 
 export default function ImprovementActions() {
+  // Backend returns [] for now — falls back to mock
+  const actions = mockActions;
+
   return (
     <div className="card p-6">
       <div className="flex items-center justify-between mb-4">
@@ -16,7 +19,7 @@ export default function ImprovementActions() {
         </button>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
-        {improvementActions.map((action) => (
+        {actions.map((action) => (
           <div
             key={action.id}
             className="border border-gray-100 rounded-xl p-4 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-200 group"
