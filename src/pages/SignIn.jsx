@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Eye, EyeOff, ArrowRight, TrendingUp, Star, Shield } from 'lucide-react';
+import { Zap, Eye, EyeOff, ArrowRight, TrendingUp, Star, Shield, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const FLOATING_STATS = [
   { label: 'Employability Score', value: '87%', color: '#6366F1', icon: TrendingUp },
@@ -10,17 +11,30 @@ const FLOATING_STATS = [
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(false);
   const [loading, setLoading]   = useState(false);
   const [focused, setFocused]   = useState(null);
+  const [error, setError]       = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
-    setTimeout(() => navigate('/dashboard'), 1200);
+    try {
+      await login(email, password);
+      navigate('/dashboard');
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        'Something went wrong. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -185,6 +199,14 @@ export default function SignIn() {
               </div>
               <span className="remember-label">Keep me signed in</span>
             </label>
+
+            {/* Error message */}
+            {error && (
+              <div className="error-banner">
+                <AlertCircle style={{ width: 14, height: 14, flexShrink: 0 }} />
+                <span>{error}</span>
+              </div>
+            )}
 
             {/* CTA */}
             <button
@@ -453,6 +475,15 @@ export default function SignIn() {
         .checkbox--checked { background: #6366F1; border-color: #6366F1; }
         .check-mark { width: 12px; height: 10px; }
         .remember-label { font-size: 0.875rem; color: #475569; font-weight: 500; }
+
+        /* Error banner */
+        .error-banner {
+          display: flex; align-items: center; gap: 0.5rem;
+          background: #FEF2F2; border: 1px solid #FECACA;
+          border-radius: 8px; padding: 0.625rem 0.875rem;
+          font-size: 0.8125rem; color: #DC2626; font-weight: 500;
+          animation: fadeUp 0.25s ease-out both;
+        }
 
         /* CTA */
         .signin-btn {

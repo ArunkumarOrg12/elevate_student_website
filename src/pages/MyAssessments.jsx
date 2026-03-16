@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardList, GitCompare } from 'lucide-react';
 import AssessmentStats from '../components/assessments/AssessmentStats';
 import AssessmentFilters from '../components/assessments/AssessmentFilters';
@@ -6,6 +7,7 @@ import AssessmentCard from '../components/assessments/AssessmentCard';
 import { assessments } from '../data/mockData';
 
 export default function MyAssessments() {
+  const navigate = useNavigate();
   const [filtered, setFiltered] = useState(assessments);
 
   function handleFilter(cat) {
@@ -38,7 +40,7 @@ export default function MyAssessments() {
           <button className="btn-secondary">
             <GitCompare className="w-4 h-4" /> Compare View
           </button>
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={() => navigate('/assessment/register')}>
             <ClipboardList className="w-4 h-4" /> New Assessment
           </button>
         </div>
