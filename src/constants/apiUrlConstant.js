@@ -17,6 +17,15 @@ export const STUDENT_URLS = {
   GROWTH:          '/api/v1/student/growth',
   RECOMMENDATIONS: '/api/v1/student/recommendations',
   REPORTS:         '/api/v1/student/reports',
+  GET_STUDENT_PROFILE: (id) => `/api/v1/student/${id}`,
+  GET_TIMELINE: (id) => `/api/v1/student/${id}/timeline`,
+  GET_TOPIC_MASTERY: (id) => `/api/v1/student/${id}/topic-mastery`,
+  GET_BEHAVIOR_RADAR: (id) => `/api/v1/student/${id}/behavioral-radar`,
+  GET_ASSESSMENT_HISTORY: (id) => `/api/v1/student/${id}/assessment-history`,
+  GET_PEER_BENCHMARK: (id) => `/api/v1/student/${id}/peer-benchmark`,
+  GET_STRENGTH_WEAKNESS: (id) => `/api/v1/student/${id}/strengths-weaknesses`,
+  GET_COMPARISON: (id) => `/api/v1/student/${id}/comparison`,
+  GET_PLACEMENTS: (id) => `/api/v1/student/${id}/placements`,
 };
 
 // ── TanStack Query cache keys ─────────────────────────────────────────────────
@@ -29,3 +38,6 @@ export const QUERY_KEYS = {
   RECOMMENDATIONS: ['recommendations'],
   REPORTS:         ['reports'],
 };
+
+// constants/apiUrlConstant.ts
+
