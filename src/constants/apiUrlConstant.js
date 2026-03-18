@@ -28,15 +28,32 @@ export const STUDENT_URLS = {
   GET_PLACEMENTS: (id) => `/api/v1/student/${id}/placements`,
 };
 
+// ── Cycles & Attempts ─────────────────────────────────────────────────────────
+export const CYCLE_URLS = {
+  LIST:              '/api/v1/student/cycles',
+  GET:               (id) => `/api/v1/assessments/cycles/${id}`,
+  RESULTS:           (id) => `/api/v1/assessments/cycles/${id}/results`,
+  LEADERBOARD:       (id) => `/api/v1/assessments/cycles/${id}/leaderboard`,
+  STUDENT_CYCLES:    '/api/v1/assessments/cycles',
+  START_ATTEMPT:     (cycleId)   => `/api/v1/assessments/cycles/${cycleId}/start`,
+  SUBMIT_ATTEMPT:    (attemptId) => `/api/v1/assessments/attempts/${attemptId}/submit`,
+  ATTEMPT_QUESTIONS: (attemptId) => `/api/v1/assessments/attempts/${attemptId}/questions`,
+  ATTEMPT_RESULTS:   (attemptId) => `/api/v1/assessments/attempts/${attemptId}/results`,
+};
+
 // ── TanStack Query cache keys ─────────────────────────────────────────────────
 export const QUERY_KEYS = {
-  PROFILE:         ['profile'],
-  DASHBOARD:       ['dashboard'],
-  ASSESSMENTS:     ['assessments'],
-  SKILLS:          ['skills'],
-  GROWTH:          ['growth'],
-  RECOMMENDATIONS: ['recommendations'],
-  REPORTS:         ['reports'],
+  PROFILE:           ['profile'],
+  DASHBOARD:         ['dashboard'],
+  ASSESSMENTS:       ['assessments'],
+  SKILLS:            ['skills'],
+  GROWTH:            ['growth'],
+  RECOMMENDATIONS:   ['recommendations'],
+  REPORTS:           ['reports'],
+  STUDENT_CYCLES:    ['student-cycles'],
+  CYCLE:             (id) => ['cycle', id],
+  ATTEMPT_QUESTIONS: (id) => ['attempt-questions', id],
+  ATTEMPT_RESULTS:   (id) => ['attempt-results', id],
 };
 
 // constants/apiUrlConstant.ts

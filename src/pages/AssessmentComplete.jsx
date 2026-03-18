@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Hash, Clock4, FileText } from 'lucide-react';
+import { Calendar, Hash, Clock4, FileText, Trophy, Loader2 } from 'lucide-react';
 import { useAssessmentFlow } from '../context/AssessmentFlowContext';
-import { examQuestions } from '../data/mockData';
+import { useAttemptResults } from '../controllers/assessmentsController';
 
 function formatTime(seconds) {
   if (!seconds && seconds !== 0) return '—';
@@ -19,19 +19,33 @@ function formatDate(ts) {
 export default function AssessmentComplete() {
   const navigate = useNavigate();
   const { flow } = useAssessmentFlow();
-  const { examConfig, examCode, answers, startTime, isSubmitted } = flow;
+  const { examConfig, answers, startTime, isSubmitted, attemptId, submitResult } = flow;
+
+  // Poll for results from API; falls back to submitResult already stored in context
+  const { data: apiResults, isLoading: resultsLoading } = useAttemptResults(attemptId);
+  const results = apiResults || submitResult;
 
   useEffect(() => {
-    if (!isSubmitted) navigate('/assessment/register');
+    if (!isSubmitted) navigate('/assessments');
   }, [isSubmitted, navigate]);
 
   if (!isSubmitted) return null;
 
-  const questions = examQuestions[examCode] || [];
-  const attempted = Object.keys(answers || {}).length;
-  const elapsed   = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
-  const duration  = examConfig ? examConfig.duration * 60 : 0;
-  const timeTaken = Math.min(elapsed, duration);
+  const attempted  = Object.keys(answers || {}).length;
+  const totalQ     = examConfig?.totalQuestions || results?.totalQuestions || attempted;
+  const elapsed    = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+  const duration   = examConfig ? (examConfig.duration_minutes || examConfig.duration || 60) * 60 : 0;
+  const timeTaken  = Math.min(elapsed, duration);
+
+  // Backend returns: { composite_score: { percentage_score, total_score, max_score }, answers_breakdown: [...] }
+  const compositeScore = results?.composite_score ?? results;
+  const score = compositeScore?.percentage_score != null
+    ? Math.round(compositeScore.percentage_score)
+    : (results?.score ?? results?.percentage ?? null);
+  const answersBreakdown = results?.answers_breakdown ?? [];
+  const correct = answersBreakdown.length > 0
+    ? answersBreakdown.filter(a => a.is_correct).length
+    : (results?.correctCount ?? results?.correct ?? null);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
@@ -107,6 +121,30 @@ export default function AssessmentComplete() {
           </p>
         </div>
 
+        {/* Score Card — shown when results available */}
+        {resultsLoading && (
+          <div className="complete-enter flex items-center justify-center gap-2 text-gray-500 text-sm" style={{ animationDelay: '0.25s' }}>
+            <Loader2 style={{ width: 16, height: 16 }} className="animate-spin text-indigo-500" />
+            Fetching your results…
+          </div>
+        )}
+        {score != null && (
+          <div className="complete-enter card p-5 flex items-center justify-between" style={{ animationDelay: '0.25s' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                <Trophy style={{ width: 18, height: 18 }} className="text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Your Score</p>
+                {correct != null && (
+                  <p className="text-xs text-gray-500 mt-0.5">{correct} of {totalQ} correct</p>
+                )}
+              </div>
+            </div>
+            <p className="stat-number text-3xl text-indigo-600">{score}%</p>
+          </div>
+        )}
+
         {/* Summary Card */}
         <div className="complete-enter card p-6 space-y-4" style={{ animationDelay: '0.35s' }}>
           <div className="flex items-center gap-2 mb-1">
@@ -116,19 +154,25 @@ export default function AssessmentComplete() {
           <div className="h-px bg-gray-100" />
 
           <div className="space-y-3">
-            <SummaryRow icon={Hash} label="Questions Attempted" value={`${attempted} / ${questions.length}`} />
-            <SummaryRow icon={Clock4} label="Time Taken" value={formatTime(timeTaken)} />
-            <SummaryRow icon={Calendar} label="Submitted On" value={formatDate(startTime)} />
+            <SummaryRow icon={Hash}     label="Questions Attempted" value={`${attempted} / ${totalQ}`} />
+            <SummaryRow icon={Clock4}   label="Time Taken"          value={formatTime(timeTaken)} />
+            <SummaryRow icon={Calendar} label="Submitted On"        value={formatDate(startTime)} />
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="complete-enter" style={{ animationDelay: '0.5s' }}>
+        {/* CTAs */}
+        <div className="complete-enter flex gap-3" style={{ animationDelay: '0.5s' }}>
+          <button
+            onClick={() => navigate('/assessments')}
+            className="flex-1 btn-secondary justify-center"
+          >
+            My Assessments
+          </button>
           <button
             onClick={() => navigate('/dashboard')}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-[9px] transition-all duration-200 text-sm"
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-[9px] transition-all duration-200 text-sm"
           >
-            Return to Dashboard →
+            Dashboard →
           </button>
         </div>
       </div>

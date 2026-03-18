@@ -2,12 +2,11 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Flag, ChevronLeft, ChevronRight, Timer, Maximize,
-  AlertTriangle, X, Camera, CameraOff, ShieldAlert,
+  AlertTriangle, X, ShieldAlert, Loader2,
 } from 'lucide-react';
 import { useAssessmentFlow } from '../context/AssessmentFlowContext';
-import { examQuestions } from '../data/mockData';
+import { useAttemptQuestions, useSubmitAttempt } from '../controllers/assessmentsController';
 import {
-  getStream, stopCamera, detectPhone,
   removeKeyLock, removeScreenBlock,
 } from '../services/proctorService';
 
@@ -22,9 +21,13 @@ const DIFF_STYLE = {
 };
 
 const TOPIC_BADGE = (t) => {
+  if (!t) return 'badge-aptitude';
   if (t.includes('Quantitative')) return 'badge-aptitude';
   if (t.includes('Logical'))      return 'badge-behavioral';
   if (t.includes('Data'))         return 'badge-technical';
+  if (t.includes('Behavioral'))   return 'badge-behavioral';
+  if (t.includes('Technical'))    return 'badge-technical';
+  if (t.includes('Cognitive'))    return 'badge-aptitude';
   return 'badge-aptitude';
 };
 
@@ -33,7 +36,6 @@ const VIOLATION_COPY = {
   fullscreen: { title: 'Fullscreen Exited',         msg: 'You exited fullscreen mode. All exam sessions must remain in fullscreen.', icon: '⚠️' },
   copy:       { title: 'Copy/Paste Blocked',        msg: 'Clipboard operations are not permitted during the exam.', icon: '📋' },
   screenshot: { title: 'Screenshot Attempt Blocked', msg: 'Screenshot tools are disabled during proctored exams.', icon: '📸' },
-  phone:      { title: 'Phone Detected',            msg: 'A mobile device was detected in the camera frame. Please remove it.', icon: '📱' },
 };
 
 // ─── Component ───────────────────────────────────────────────
@@ -56,12 +58,6 @@ export default function AssessmentExam() {
   // Fullscreen gate
   const [isFullscreen, setIsFullscreen] = useState(() => !!document.fullscreenElement);
 
-  // Camera panel
-  const [camActive,    setCamActive]    = useState(false);
-  const [phoneScore,   setPhoneScore]   = useState(0);
-  const videoRef   = useRef(null);
-  const pdInterval = useRef(null);
-
   // ── refs to avoid stale closures ──
   const answersRef    = useRef({});
   const flaggedRef    = useRef([]);
@@ -76,7 +72,7 @@ export default function AssessmentExam() {
   // ── guard: redirect if no flow state ──
   useEffect(() => {
     if (!flow.examConfig || !flow.startTime) {
-      navigate('/assessment/register');
+      navigate('/assessments');
     }
   }, []);
 
@@ -112,26 +108,97 @@ export default function AssessmentExam() {
     };
   }, [flow.fullName, flow.studentId, flow.examCode, flow.fingerprint]);
 
-  if (!flow.examConfig || !flow.startTime) return null;
+  const submitAttemptMutation = useSubmitAttempt();
 
-  const questions     = examQuestions[flow.examCode] || [];
-  const totalDuration = flow.examConfig.duration * 60;
+  // Use questions from flow context (stored by SecurityCheck from startAttempt response)
+  // Fall back to separate API call only if flow.questions is empty
+  const hasFlowQuestions = flow.questions && flow.questions.length > 0;
+  const { data: questionsData, isLoading: questionsLoading } = useAttemptQuestions(
+    hasFlowQuestions ? null : flow.attemptId  // skip API call if we already have questions
+  );
+
+  // Normalise to { question, question_image, options: [{text, image}], topic, difficulty, _id }
+  const questions = useMemo(() => {
+    const source = hasFlowQuestions ? flow.questions : questionsData;
+    const raw = Array.isArray(source) ? source : (source?.questions ?? []);
+    return raw.map(q => ({
+      ...q,
+      question:       q.question_text || q.questionText || q.question || '',
+      question_image: q.question_image || null,
+      options: (q.options || []).map(o =>
+        typeof o === 'string'
+          ? { text: o, image: null }
+          : { text: o.text || o.optionText || '', image: o.image || null }
+      ),
+    }));
+  }, [hasFlowQuestions, flow.questions, questionsData]);
+
+  if (!flow.examConfig || !flow.startTime) {
+    return (
+      <div className="fixed inset-0 bg-[#F8FAFC] flex items-center justify-center" style={{ zIndex: 50 }}>
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+          <p className="font-semibold text-gray-700">Redirecting…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasFlowQuestions && questionsLoading) {
+    return (
+      <div className="fixed inset-0 bg-[#F8FAFC] flex items-center justify-center" style={{ zIndex: 50 }}>
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+          <p className="font-semibold text-gray-700">Loading exam questions…</p>
+          <p className="text-sm text-gray-400">Please wait while we fetch your questions</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-[#F8FAFC] flex items-center justify-center" style={{ zIndex: 50 }}>
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+          <AlertTriangle className="w-10 h-10 text-amber-500" />
+          <p className="font-semibold text-gray-700">No questions loaded</p>
+          <p className="text-sm text-gray-400">Could not retrieve exam questions. Please go back and try again.</p>
+          <button onClick={() => navigate('/assessments')} className="btn-primary mt-2">
+            Back to Assessments
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalDuration = (flow.examConfig.duration_minutes || flow.examConfig.duration || 60) * 60;
 
   // ── submit (stable via ref) ──
   const doSubmitRef = useRef(null);
   doSubmitRef.current = (reason = 'manual') => {
     if (terminatedRef.current) return;
     terminatedRef.current = true;
-    clearInterval(pdInterval.current);
     removeKeyLock();
     removeScreenBlock();
-    stopCamera();
+
+    const answersCopy = { ...answersRef.current };
+
     updateFlow({
-      answers:          answersRef.current,
+      answers:          answersCopy,
       flaggedQuestions: flaggedRef.current,
       isSubmitted:      true,
       terminatedReason: reason,
     });
+
+    // Fire-and-forget: submit to API, store result in context when done
+    // Backend expects index-based format: { answers: { "0": 2, "1": 0 } }
+    if (flow.attemptId) {
+      submitAttemptMutation.mutate(
+        { attemptId: flow.attemptId, answers: answersCopy },
+        { onSuccess: (result) => updateFlow({ submitResult: result }) },
+      );
+    }
+
     navigate('/assessment/complete');
   };
 
@@ -147,25 +214,6 @@ export default function AssessmentExam() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [flow.startTime, totalDuration]);
-
-  // ── camera panel ──
-  useEffect(() => {
-    const stream = getStream();
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      setCamActive(true);
-    }
-    // Phone detection loop — every 600ms
-    pdInterval.current = setInterval(() => {
-      if (!videoRef.current || terminatedRef.current) return;
-      const score = detectPhone(videoRef.current);
-      setPhoneScore(score);
-      if (score > 0.45) {
-        triggerViolation('phone');
-      }
-    }, 600);
-    return () => clearInterval(pdInterval.current);
-  }, []);
 
   // ── fullscreen: enter on mount + enforce ──
   useEffect(() => {
@@ -261,13 +309,6 @@ export default function AssessmentExam() {
     if (terminatedRef.current) return;
     const current = violationsRef.current;
 
-    // Debounce: skip same-type violation within 8s
-    const last = current.filter(v => v === type);
-    if (last.length > 0) {
-      // phone detection is frequent — only re-trigger every 15s
-      if (type === 'phone') return;
-    }
-
     const next = [...current, type];
     setViolations(next);
     violationsRef.current = next;
@@ -291,14 +332,11 @@ export default function AssessmentExam() {
   const isFlagged       = localFlagged.includes(currentQ);
   const selectedOption  = localAnswers[currentQ] ?? null;
 
-  const mins = timeLeft !== null ? Math.floor(timeLeft / 60) : flow.examConfig.duration;
+  const mins = timeLeft !== null ? Math.floor(timeLeft / 60) : (flow.examConfig.duration_minutes || flow.examConfig.duration || 60);
   const secs = timeLeft !== null ? timeLeft % 60 : 0;
   const timerColor =
     timeLeft !== null && timeLeft <= 60  ? '#EF4444' :
     timeLeft !== null && timeLeft <= 300 ? '#F59E0B' : '#10B981';
-
-  const phoneDanger  = phoneScore > 0.45;
-  const phoneWarning = phoneScore > 0.28;
 
   // ── handlers ──
   function selectOption(idx)  { setLocalAnswers(prev => ({ ...prev, [currentQ]: idx })); }
@@ -322,12 +360,8 @@ export default function AssessmentExam() {
           from { opacity:0; transform: scale(0.92); }
           to   { opacity:1; transform: scale(1); }
         }
-        @keyframes camBlink {
-          0%,100% { opacity:1; } 50% { opacity:0.3; }
-        }
         .modal-in   { animation: modalIn  0.2s ease-out forwards; }
         .viol-in    { animation: violIn   0.25s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
-        .cam-blink  { animation: camBlink 1.2s ease-in-out infinite; }
       `}</style>
 
       {/* ── Top Bar ─────────────────────────────────────────── */}
@@ -413,6 +447,13 @@ export default function AssessmentExam() {
                   <p className="text-base md:text-lg text-gray-800 font-medium leading-relaxed">
                     {q.question}
                   </p>
+                  {q.question_image && (
+                    <img
+                      src={q.question_image}
+                      alt="Question illustration"
+                      className="mt-4 rounded-lg max-w-full max-h-64 object-contain border border-gray-100"
+                    />
+                  )}
                 </div>
 
                 {/* Options */}
@@ -439,7 +480,16 @@ export default function AssessmentExam() {
                         >
                           {LETTERS[idx]}
                         </span>
-                        <span className="text-sm text-gray-700 font-medium">{opt}</span>
+                        <span className="flex flex-col gap-1.5 flex-1 min-w-0">
+                          <span className="text-sm text-gray-700 font-medium">{opt.text}</span>
+                          {opt.image && (
+                            <img
+                              src={opt.image}
+                              alt={`Option ${LETTERS[idx]}`}
+                              className="rounded-lg max-h-28 object-contain border border-gray-100 self-start"
+                            />
+                          )}
+                        </span>
                       </button>
                     );
                   })}
@@ -470,53 +520,8 @@ export default function AssessmentExam() {
           </div>
         </div>
 
-        {/* Right: Navigator + Camera */}
+        {/* Right: Navigator */}
         <div className="hidden lg:flex w-64 xl:w-72 flex-col border-l border-gray-200 bg-white overflow-y-auto flex-shrink-0">
-
-          {/* Camera panel */}
-          <div className="border-b border-gray-100 p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                {camActive
-                  ? <Camera style={{ width: 13, height: 13 }} className="text-emerald-500" />
-                  : <CameraOff style={{ width: 13, height: 13 }} className="text-gray-400" />}
-                <span className="text-xs font-semibold text-gray-600">Proctor Cam</span>
-              </div>
-              {camActive && (
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 cam-blink" />
-                  <span className="text-xs text-gray-400" style={{ fontFamily: 'monospace' }}>REC</span>
-                </div>
-              )}
-            </div>
-            <div
-              className="relative rounded-lg overflow-hidden bg-gray-900"
-              style={{ height: 100 }}
-            >
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
-              />
-              {!camActive && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <CameraOff style={{ width: 20, height: 20 }} className="text-gray-600" />
-                </div>
-              )}
-            </div>
-            {/* Phone detection status */}
-            <div className="flex items-center justify-between mt-1.5 px-0.5">
-              <span className="text-xs text-gray-400">Phone detect</span>
-              <span
-                className="text-xs font-semibold"
-                style={{ color: phoneDanger ? '#EF4444' : phoneWarning ? '#F59E0B' : '#10B981' }}
-              >
-                {phoneDanger ? '⚠ DETECTED' : phoneWarning ? '~ Uncertain' : '✓ Clear'}
-              </span>
-            </div>
-          </div>
 
           {/* Navigator */}
           <div className="p-4 flex flex-col gap-3 flex-1">
