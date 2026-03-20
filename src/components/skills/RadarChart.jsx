@@ -3,7 +3,6 @@ import {
   PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip,
 } from 'recharts';
 import { useStudentBehaviorRadar } from '../../controllers/studentController';
-import { radarData as mockRadarData } from '../../data/mockData';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -37,12 +36,20 @@ function transformRadarData(apiData) {
 }
 
 export default function RadarChartComp() {
-  const { data: radarRes, isLoading } = useStudentBehaviorRadar();
+  const { data: radarRes, isLoading, isError } = useStudentBehaviorRadar();
 
-  const radarData = transformRadarData(radarRes) ?? mockRadarData;
+  const radarData = transformRadarData(radarRes);
 
   if (isLoading) {
     return <div className="card p-6 h-[340px] animate-pulse bg-gray-50" />;
+  }
+
+  if (isError || !radarData) {
+    return (
+      <div className="card p-6 h-[340px] flex items-center justify-center text-sm text-gray-400">
+        Radar data unavailable
+      </div>
+    );
   }
 
   return (

@@ -2,9 +2,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Trophy, ChevronLeft, AlertCircle, Loader2,
   CheckCircle2, XCircle, MinusCircle, Clock4,
-  BarChart3, FileText, Calendar,
+  BarChart3, FileText, Calendar, BookOpen,
 } from 'lucide-react';
 import { useAttemptResults } from '../controllers/assessmentsController';
+
+const SECTION_LABELS = {
+  aptitude_score:      { label: 'Aptitude',      weight: 30 },
+  technical_score:     { label: 'Technical',     weight: 35 },
+  behavioral_score:    { label: 'Behavioral',    weight: 20 },
+  communication_score: { label: 'Communication', weight: 15 },
+  // Handle if section_name already contains a display name
+  Aptitude:      { label: 'Aptitude',      weight: 30 },
+  Technical:     { label: 'Technical',     weight: 35 },
+  Behavioral:    { label: 'Behavioral',    weight: 20 },
+  'Soft Skills': { label: 'Behavioral',    weight: 20 },
+  Communication: { label: 'Communication', weight: 15 },
+};
 
 function formatDate(ts) {
   if (!ts) return '—';
@@ -210,10 +223,14 @@ function ResultsView({ data, onBack }) {
             {sectionScores.map((sec, i) => {
               const secPct = sec.percentage_score != null ? Math.round(sec.percentage_score) : null;
               const secColor = scoreColor(secPct);
+              const sectionInfo = SECTION_LABELS[sec.section_name] ?? SECTION_LABELS[sec.section_key] ?? null;
+              const displayName = sectionInfo
+                ? `${sectionInfo.label} (${sectionInfo.weight}%)`
+                : (sec.section_name || `Section ${i + 1}`);
               return (
                 <div key={sec.id || i} className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-700">{sec.section_name || `Section ${i + 1}`}</p>
+                    <p className="text-sm font-medium text-gray-700">{displayName}</p>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
                       {sec.questions_correct != null && (
                         <span>{sec.questions_correct}/{sec.questions_attempted ?? '—'} correct</span>
@@ -241,6 +258,9 @@ function ResultsView({ data, onBack }) {
           </div>
         </div>
       )}
+
+      {/* Topic Analysis */}
+      <TopicAnalysis topicAnalysis={data.topic_analysis} />
 
       {/* Answers breakdown */}
       {breakdown.length > 0 && (
@@ -306,6 +326,63 @@ function AnswerRow({ index, item }) {
           )}
           {isSkipped && <span className="text-gray-400 italic">Skipped</span>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Topic Analysis ────────────────────────────────────────────────────────────
+function TopicAnalysis({ topicAnalysis }) {
+  if (!topicAnalysis || Object.keys(topicAnalysis).length === 0) return null;
+
+  return (
+    <div className="card p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <BookOpen style={{ width: 15, height: 15 }} className="text-indigo-500" />
+        <h3 className="font-semibold text-gray-800 text-sm">Topic Analysis</h3>
+      </div>
+      <div className="h-px bg-gray-100" />
+      <div className="space-y-5">
+        {Object.entries(topicAnalysis).map(([section, topics]) => (
+          <div key={section}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3 capitalize">{section}</p>
+            <div className="space-y-3">
+              {Object.entries(topics).map(([topicName, info]) => (
+                <div key={topicName} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium text-gray-700 truncate">{topicName}</span>
+                      <span
+                        className="flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: info.weak ? '#FEF2F2' : '#ECFDF5',
+                          color:      info.weak ? '#EF4444' : '#10B981',
+                        }}
+                      >
+                        {info.weak ? 'Weak' : 'Strong'}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-gray-600 flex-shrink-0 ml-2">
+                      {info.score != null ? `${info.score}%` : '—'}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${info.score ?? 0}%`,
+                        background: info.weak ? '#EF4444' : '#10B981',
+                      }}
+                    />
+                  </div>
+                  {info.weak && info.recommendation && (
+                    <p className="text-xs text-gray-400 italic leading-relaxed">{info.recommendation}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

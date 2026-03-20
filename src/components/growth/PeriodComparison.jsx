@@ -1,5 +1,4 @@
 import { useStudentTimeline } from '../../controllers/studentController';
-import { periodComparison as mockPeriodComparison } from '../../data/mockData';
 import { getScoreBg } from '../../utils/helpers';
 
 const CATS = ['Overall', 'Aptitude', 'Technical', 'Behavioral', 'Communication'];
@@ -45,12 +44,20 @@ function derivePeriods(apiData) {
 }
 
 export default function PeriodComparison() {
-  const { data: timelineRes, isLoading } = useStudentTimeline();
-
-  const periodComparison = derivePeriods(timelineRes) ?? mockPeriodComparison;
+  const { data: timelineRes, isLoading, isError } = useStudentTimeline();
 
   if (isLoading) {
     return <div className="card p-6 h-[280px] animate-pulse bg-gray-50" />;
+  }
+
+  const periodComparison = derivePeriods(timelineRes);
+
+  if (isError || !periodComparison) {
+    return (
+      <div className="card p-6 h-[280px] flex items-center justify-center text-sm text-gray-400">
+        No timeline data available
+      </div>
+    );
   }
 
   return (
