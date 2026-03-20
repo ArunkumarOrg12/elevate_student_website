@@ -1,7 +1,7 @@
-import { skillHeatmap } from '../../data/mockData';
+import { useStudentSkillHeatmap } from '../../controllers/studentController';
+import { skillHeatmap as mockSkillHeatmap } from '../../data/mockData';
 
 function heatColor(v) {
-  // 30–100 → light to dark teal
   const t = (v - 30) / 70;
   const r = Math.round(219 - t * 150);
   const g = Math.round(234 - t * 70);
@@ -13,8 +13,35 @@ function textColor(v) {
   return v > 70 ? '#1E3A5F' : '#334155';
 }
 
+// Transform backend skill-heatmap response.
+// Backend may return { categories, semesters, data } or [{ category, semester, score }].
+function transformHeatmap(apiData) {
+  if (!apiData) return null;
+  if (apiData.categories && apiData.semesters && apiData.data) return apiData;
+  if (Array.isArray(apiData) && apiData.length > 0 && apiData[0].category) {
+    const categories = [...new Set(apiData.map(d => d.category))];
+    const semesters  = [...new Set(apiData.map(d => d.semester))];
+    const data = categories.map(cat =>
+      semesters.map(sem => {
+        const entry = apiData.find(d => d.category === cat && d.semester === sem);
+        return entry ? Math.round(parseFloat(entry.score ?? 0)) : 0;
+      })
+    );
+    return { categories, semesters, data };
+  }
+  return null;
+}
+
 export default function SkillHeatmap() {
-  const { categories, semesters, data } = skillHeatmap;
+  const { data: heatmapRes, isLoading } = useStudentSkillHeatmap();
+
+  const heatmap = transformHeatmap(heatmapRes) ?? mockSkillHeatmap;
+  const { categories, semesters, data } = heatmap;
+
+  if (isLoading) {
+    return <div className="card p-6 h-[280px] animate-pulse bg-gray-50" />;
+  }
+
   return (
     <div className="card p-6">
       <h3 className="font-display font-semibold text-base text-gray-800 mb-1">Skill Heatmap</h3>

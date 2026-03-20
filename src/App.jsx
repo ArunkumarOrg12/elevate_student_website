@@ -38,7 +38,9 @@ export default function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <SidebarProvider><AppShell /></SidebarProvider>
+                <AssessmentFlowProvider>
+                  <SidebarProvider><AppShell /></SidebarProvider>
+                </AssessmentFlowProvider>
               </ProtectedRoute>
             }
           >
@@ -50,13 +52,11 @@ export default function App() {
             <Route path="recommendations" element={<Recommendations />} />
             <Route path="reports"         element={<Reports />} />
             <Route path="settings"        element={<Settings />} />
-            <Route path="assessment" element={<AssessmentFlowProvider />}>
-              <Route path="register"       element={<AssessmentRegister />} />
-              <Route path="overview"       element={<AssessmentOverview />} />
-              <Route path="security-check" element={<AssessmentSecurityCheck />} />
-              <Route path="exam"           element={<AssessmentExam />} />
-              <Route path="complete"       element={<AssessmentComplete />} />
-            </Route>
+            <Route path="assessment/register"       element={<AssessmentRegister />} />
+            <Route path="assessment/overview"       element={<AssessmentOverview />} />
+            <Route path="assessment/security-check" element={<AssessmentSecurityCheck />} />
+            <Route path="assessment/exam"           element={<AssessmentExam />} />
+            <Route path="assessment/complete"       element={<AssessmentComplete />} />
           </Route>
         </Routes>
       </AuthProvider>

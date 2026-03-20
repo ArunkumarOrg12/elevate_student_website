@@ -2,7 +2,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts';
-import { assessmentFrequency } from '../../data/mockData';
+import { useStudentAssessmentHistory } from '../../controllers/studentController';
+import { assessmentFrequency as mockFrequency } from '../../data/mockData';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -14,20 +15,43 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+// Group assessment history records by semester label and count.
+function deriveFrequency(apiData) {
+  if (!Array.isArray(apiData) || apiData.length === 0) return null;
+  // If already in { semester, count } format
+  if (apiData[0].semester !== undefined && apiData[0].count !== undefined) return apiData;
+  // Group by semester_label or derive from created_at
+  const counts = {};
+  apiData.forEach(a => {
+    const key = a.semester_label ?? a.cycle_label ?? a.semester ??
+      (a.created_at ? `Sem ${new Date(a.created_at).getFullYear()}` : 'Unknown');
+    counts[key] = (counts[key] ?? 0) + 1;
+  });
+  return Object.entries(counts).map(([semester, count]) => ({ semester, count }));
+}
+
 export default function FrequencyChart() {
+  const { data: historyRes, isLoading } = useStudentAssessmentHistory();
+
+  const chartData = deriveFrequency(historyRes) ?? mockFrequency;
+
+  if (isLoading) {
+    return <div className="card p-6 h-[280px] animate-pulse bg-gray-50" />;
+  }
+
   return (
     <div className="card p-6">
       <h3 className="font-display font-semibold text-base text-gray-800 mb-1">Assessment Frequency</h3>
       <p className="text-xs text-gray-400 mb-5">Assessments taken per semester</p>
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={assessmentFrequency} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+        <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
           <XAxis dataKey="semester" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-          <YAxis domain={[0, 7]} tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+          <YAxis domain={[0, 'auto']} tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
           <Bar dataKey="count" radius={[5, 5, 0, 0]} maxBarSize={40}>
-            {assessmentFrequency.map((_, i) => (
-              <Cell key={i} fill={i === assessmentFrequency.length - 1 ? '#6366F1' : '#C7D2FE'} />
+            {chartData.map((_, i) => (
+              <Cell key={i} fill={i === chartData.length - 1 ? '#6366F1' : '#C7D2FE'} />
             ))}
           </Bar>
         </BarChart>

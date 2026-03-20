@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield, Monitor, Maximize, Smartphone, Keyboard,
-  Fingerprint, ShieldCheck, CheckCircle2, XCircle,
+  Shield, Monitor, Maximize, Keyboard,
+  Fingerprint, ShieldCheck, CheckCircle2, XCircle, Loader2,
 } from 'lucide-react';
 import { useAssessmentFlow } from '../context/AssessmentFlowContext';
+import { useStartAttempt } from '../controllers/assessmentsController';
 import {
-  startCamera, initPhoneDetector, getFingerprint, generateFingerprint,
+  getFingerprint, generateFingerprint,
   installKeyLock, installScreenBlock,
 } from '../services/proctorService';
 
@@ -41,23 +42,6 @@ const CHECKS = [
         // Some browsers deny on first call without user gesture — silently continue
       }
       return 'Fullscreen active';
-    },
-  },
-  {
-    key: 'phoneDetector',
-    label: 'Phone Shape Detector',
-    desc: 'Object shape + lens signature classifier',
-    Icon: Smartphone,
-    run: async (setVideoStream) => {
-      try {
-        const stream = await startCamera();
-        setVideoStream(stream);
-        await delay(1200);
-        const ok = initPhoneDetector();
-        return ok ? 'Camera active — detector initialized' : 'Camera unavailable — detection disabled';
-      } catch {
-        return 'Camera unavailable — phone detection disabled';
-      }
     },
   },
   {
@@ -97,24 +81,18 @@ export default function AssessmentSecurityCheck() {
   const navigate    = useNavigate();
   const { flow, updateFlow } = useAssessmentFlow();
 
-  const [states,     setStates]     = useState(() => Object.fromEntries(CHECKS.map(c => [c.key, 'pending'])));
-  const [subtexts,   setSubtexts]   = useState(() => Object.fromEntries(CHECKS.map(c => [c.key, ''])));
-  const [allPassed,  setAllPassed]  = useState(false);
-  const [failed,     setFailed]     = useState(null); // { key, message }
-  const [videoStream, setVideoStream] = useState(null);
-  const videoRef = useRef(null);
+  const [states,      setStates]      = useState(() => Object.fromEntries(CHECKS.map(c => [c.key, 'pending'])));
+  const [subtexts,    setSubtexts]    = useState(() => Object.fromEntries(CHECKS.map(c => [c.key, ''])));
+  const [allPassed,   setAllPassed]   = useState(false);
+  const [failed,      setFailed]      = useState(null); // { key, message }
+  const [starting,    setStarting]    = useState(false);
+  const [startError,  setStartError]  = useState(null);
+  const startAttemptMutation = useStartAttempt();
 
   // Guard — no context data
   useEffect(() => {
     if (!flow.examConfig) navigate('/assessment/register');
   }, [flow.examConfig, navigate]);
-
-  // Attach stream to video element once both are ready
-  useEffect(() => {
-    if (videoRef.current && videoStream) {
-      videoRef.current.srcObject = videoStream;
-    }
-  }, [videoStream, videoRef.current]);
 
   // Run all checks sequentially
   useEffect(() => {
@@ -131,7 +109,7 @@ export default function AssessmentSecurityCheck() {
         setStates(prev => ({ ...prev, [check.key]: 'checking' }));
 
         try {
-          const result = await check.run(setVideoStream);
+          const result = await check.run();
           if (cancelled) return;
           const subtext = typeof result === 'string' ? result : '';
           setSubtexts(prev => ({ ...prev, [check.key]: subtext }));
@@ -154,9 +132,36 @@ export default function AssessmentSecurityCheck() {
     return () => { cancelled = true; };
   }, []);
 
-  function handleBeginExam() {
-    updateFlow({ startTime: Date.now(), fingerprint: getFingerprint() });
-    navigate('/assessment/exam');
+  async function handleBeginExam() {
+    setStartError(null);
+    setStarting(true);
+    try {
+      const result = await startAttemptMutation.mutateAsync(flow.cycleId);
+      console.log('[SecurityCheck] startAttempt result:', JSON.stringify(result, null, 2));
+      // Backend returns { attemptId, questions, resumed, message }
+      // Handle potential nesting: result might be the data directly or under result.data
+      const data = result?.data ?? result;
+      console.log('[SecurityCheck] extracted data:', { attemptId: data?.attemptId, questionsCount: data?.questions?.length });
+      const attemptId = data?.attemptId || data?.attempt_id || data?._id || data?.id;
+      const questions = data?.questions ?? [];
+
+      if (!attemptId) {
+        setStartError('Server did not return an attempt ID. Please try again.');
+        setStarting(false);
+        return;
+      }
+
+      updateFlow({
+        startTime: Date.now(),
+        fingerprint: getFingerprint(),
+        attemptId,
+        questions, // store questions from startAttempt response
+      });
+      navigate('/assessment/exam');
+    } catch (err) {
+      setStartError(err?.response?.data?.message || 'Failed to start attempt. Please try again.');
+      setStarting(false);
+    }
   }
 
   if (!flow.examConfig) return null;
@@ -211,25 +216,6 @@ export default function AssessmentSecurityCheck() {
           <p className="text-gray-500 text-sm">All checks must pass before you can begin</p>
         </div>
 
-        {/* Camera preview — shown once camera is active */}
-        {videoStream && (
-          <div className="success-slide flex justify-center">
-            <div className="relative rounded-xl overflow-hidden border-2 border-indigo-200 bg-black" style={{ width: 200, height: 150 }}>
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
-              />
-              <div style={{ position: 'absolute', top: 6, right: 8 }} className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-500" style={{ animation: 'pulseRing 1s ease-in-out infinite' }} />
-                <span className="text-white text-xs font-bold" style={{ fontFamily: 'monospace', textShadow: '0 1px 2px #000' }}>REC</span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Checks card */}
         <div className="card p-2 space-y-0.5">
           {CHECKS.map((check) => {
@@ -262,11 +248,18 @@ export default function AssessmentSecurityCheck() {
                 <p className="text-emerald-600 text-xs mt-0.5">Device fingerprint: <span className="font-mono font-bold">{getFingerprint()}</span></p>
               </div>
             </div>
+            {startError && (
+              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-[14px] px-4 py-3">
+                <XCircle style={{ width: 16, height: 16 }} className="text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-600 text-sm">{startError}</p>
+              </div>
+            )}
             <button
               onClick={handleBeginExam}
-              className="success-slide w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-[9px] transition-all duration-200 text-sm"
+              disabled={starting}
+              className="success-slide w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[9px] transition-all duration-200 text-sm flex items-center justify-center gap-2"
             >
-              Begin Exam →
+              {starting ? <><Loader2 style={{ width: 16, height: 16 }} className="animate-spin" /> Starting exam…</> : 'Begin Exam →'}
             </button>
           </>
         )}
