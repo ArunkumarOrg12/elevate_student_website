@@ -1,12 +1,35 @@
-import { individualSkills } from '../../data/mockData';
-import { getScoreColor, getScoreBg } from '../../utils/helpers';
+import { useStudentTopicMastery } from '../../controllers/studentController';
+import { individualSkills as mockSkills } from '../../data/mockData';
+import { getScoreColor } from '../../utils/helpers';
+
+// Transform backend topic-mastery response: [{ section_name, percentage_score }]
+function transformSkills(apiData) {
+  if (!Array.isArray(apiData) || apiData.length === 0) return null;
+  if (apiData[0].section_name !== undefined) {
+    return apiData.map(d => ({
+      name:  d.section_name,
+      score: Math.round(parseFloat(d.percentage_score ?? 0)),
+    }));
+  }
+  // Already in { name, score } format
+  if (apiData[0].name !== undefined) return apiData;
+  return null;
+}
 
 export default function SkillScoresGrid() {
+  const { data: masteryRes, isLoading } = useStudentTopicMastery();
+
+  const skills = transformSkills(masteryRes) ?? mockSkills;
+
+  if (isLoading) {
+    return <div className="card p-6 h-40 animate-pulse bg-gray-50" />;
+  }
+
   return (
     <div className="card p-6">
       <h3 className="font-display font-semibold text-base text-gray-800 mb-4">Individual Skill Scores</h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {individualSkills.map((s, i) => (
+        {skills.map((s, i) => (
           <div key={i} className="text-center group">
             <div className="relative w-16 h-16 mx-auto mb-2">
               <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">

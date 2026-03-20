@@ -1,11 +1,37 @@
 import { ArrowUpRight } from 'lucide-react';
+import { useStudentImprovementPlan } from '../../controllers/studentController';
 import { improvementActions as mockActions } from '../../data/mockData';
 import CategoryBadge from '../common/CategoryBadge';
 import PriorityBadge from '../common/PriorityBadge';
 
+// Flatten backend improvement-plan into a list, take top 4 pending/in-progress actions.
+function deriveActions(apiData) {
+  if (!apiData) return null;
+  let list = [];
+  if (Array.isArray(apiData)) {
+    list = apiData;
+  } else if (typeof apiData === 'object') {
+    // { '30': [...], '60': [...], '90': [...] }
+    list = Object.values(apiData).flat();
+  }
+  if (list.length === 0) return null;
+  return list
+    .filter(a => a.status !== 'done' && a.status !== 'completed')
+    .slice(0, 4)
+    .map(a => ({
+      id:          a.id,
+      priority:    a.priority,
+      category:    a.category ?? a.section,
+      title:       a.title ?? a.action_title,
+      description: a.description ?? '',
+      points:      a.points ?? a.expected_gain ?? '',
+    }));
+}
+
 export default function ImprovementActions() {
-  // Backend returns [] for now — falls back to mock
-  const actions = mockActions;
+  const { data: planRes } = useStudentImprovementPlan();
+
+  const actions = deriveActions(planRes) ?? mockActions;
 
   return (
     <div className="card p-6">
@@ -34,10 +60,12 @@ export default function ImprovementActions() {
             <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">
               {action.description}
             </p>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg w-fit">
-              <ArrowUpRight className="w-3 h-3" />
-              ↗ {action.points} points expected
-            </div>
+            {action.points && (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg w-fit">
+                <ArrowUpRight className="w-3 h-3" />
+                ↗ {action.points} points expected
+              </div>
+            )}
           </div>
         ))}
       </div>

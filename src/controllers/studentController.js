@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import { STUDENT_URLS } from "../constants/apiUrlConstant";
 import { useAuth } from "../context/AuthContext";
@@ -14,7 +14,7 @@ export const useStudentProfile = () => {
     queryKey: ["student-profile", id],
     queryFn: async () => {
       const res = await api.get(STUDENT_URLS.GET_STUDENT_PROFILE(id));
-      return res.data; // { id, first_name, last_name, student: {...} }
+      return res.data;
     },
     enabled: !!id,
   });
@@ -26,7 +26,7 @@ export const useStudentTimeline = () => {
     queryKey: ["student-timeline", id],
     queryFn: async () => {
       const res = await api.get(STUDENT_URLS.GET_TIMELINE(id));
-      return res.data; // [ { overall_index, technical_score, ... } ]
+      return res.data;
     },
     enabled: !!id,
   });
@@ -38,7 +38,7 @@ export const useStudentTopicMastery = () => {
     queryKey: ["student-topic-mastery", id],
     queryFn: async () => {
       const res = await api.get(STUDENT_URLS.GET_TOPIC_MASTERY(id));
-      return res.data; // [ { section_name, percentage_score, created_at } ]
+      return res.data;
     },
     enabled: !!id,
   });
@@ -50,7 +50,7 @@ export const useStudentAssessmentHistory = () => {
     queryKey: ["student-assessment-history", id],
     queryFn: async () => {
       const res = await api.get(STUDENT_URLS.GET_ASSESSMENT_HISTORY(id));
-      return res.data; // [ {...} ]
+      return res.data;
     },
     enabled: !!id,
   });
@@ -74,7 +74,19 @@ export const useStudentPeerBenchmark = () => {
     queryKey: ["student-peer-benchmark", id],
     queryFn: async () => {
       const res = await api.get(STUDENT_URLS.GET_PEER_BENCHMARK(id));
-      return res.data; // { student_score, batch_average, top_percentile }
+      return res.data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useStudentSkillHeatmap = () => {
+  const id = useStudentId();
+  return useQuery({
+    queryKey: ["student-skill-heatmap", id],
+    queryFn: async () => {
+      const res = await api.get(STUDENT_URLS.GET_SKILL_HEATMAP(id));
+      return res.data;
     },
     enabled: !!id,
   });
@@ -86,7 +98,7 @@ export const useStudentStrengthWeakness = () => {
     queryKey: ["student-strength-weakness", id],
     queryFn: async () => {
       const res = await api.get(STUDENT_URLS.GET_STRENGTH_WEAKNESS(id));
-      return res.data; // { strengths: [...], weaknesses: [...] }
+      return res.data;
     },
     enabled: !!id,
   });
@@ -110,7 +122,55 @@ export const useStudentPlacements = () => {
     queryKey: ["student-placements", id],
     queryFn: async () => {
       const res = await api.get(STUDENT_URLS.GET_PLACEMENTS(id));
-      return res.data; // []
+      return res.data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useStudentRecommendations = () => {
+  const id = useStudentId();
+  return useQuery({
+    queryKey: ["student-recommendations", id],
+    queryFn: async () => {
+      const res = await api.get(STUDENT_URLS.GET_RECOMMENDATIONS(id));
+      return res.data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useStudentImprovementPlan = () => {
+  const id = useStudentId();
+  return useQuery({
+    queryKey: ["student-improvement-plan", id],
+    queryFn: async () => {
+      const res = await api.get(STUDENT_URLS.GET_IMPROVEMENT_PLAN(id));
+      return res.data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useUpdateImprovementPlan = () => {
+  const id = useStudentId();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ actionId, status }) =>
+      api.patch(STUDENT_URLS.UPDATE_IMPROVEMENT_PLAN(id, actionId), { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student-improvement-plan", id] });
+    },
+  });
+};
+
+export const useStudentMilestones = () => {
+  const id = useStudentId();
+  return useQuery({
+    queryKey: ["student-milestones", id],
+    queryFn: async () => {
+      const res = await api.get(STUDENT_URLS.GET_MILESTONES(id));
+      return res.data;
     },
     enabled: !!id,
   });
