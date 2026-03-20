@@ -2,7 +2,8 @@ import {
   RadarChart as ReRadarChart, Radar, PolarGrid, PolarAngleAxis,
   PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip,
 } from 'recharts';
-import { radarData } from '../../data/mockData';
+import { useStudentBehaviorRadar } from '../../controllers/studentController';
+import { radarData as mockRadarData } from '../../data/mockData';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -19,7 +20,31 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+// Transform backend behavioral-radar response into chart format.
+// Backend returns an array of { trait_name, student_score, batch_average } or similar.
+function transformRadarData(apiData) {
+  if (!Array.isArray(apiData) || apiData.length === 0) return null;
+  // Support { axis, you, batch } (already chart-ready) or { trait_name, student_score, batch_average }
+  if (apiData[0].axis !== undefined) return apiData;
+  if (apiData[0].trait_name !== undefined) {
+    return apiData.map(d => ({
+      axis:  d.trait_name,
+      you:   Math.round(parseFloat(d.student_score ?? 0)),
+      batch: Math.round(parseFloat(d.batch_average ?? 0)),
+    }));
+  }
+  return null;
+}
+
 export default function RadarChartComp() {
+  const { data: radarRes, isLoading } = useStudentBehaviorRadar();
+
+  const radarData = transformRadarData(radarRes) ?? mockRadarData;
+
+  if (isLoading) {
+    return <div className="card p-6 h-[340px] animate-pulse bg-gray-50" />;
+  }
+
   return (
     <div className="card p-6">
       <h3 className="font-display font-semibold text-base text-gray-800 mb-1">Skill Radar</h3>

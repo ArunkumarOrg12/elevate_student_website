@@ -113,7 +113,7 @@ export default function SignIn() {
           </div>
 
           {/* Social / SSO buttons */}
-          <div className="signin-sso">
+          {/* <div className="signin-sso">
             <button type="button" className="sso-btn">
               <GoogleIcon />
               <span>Continue with Google</span>
@@ -128,7 +128,7 @@ export default function SignIn() {
             <span className="signin-divider-line" />
             <span className="signin-divider-text">or sign in with email</span>
             <span className="signin-divider-line" />
-          </div>
+          </div> */}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="signin-form" noValidate>

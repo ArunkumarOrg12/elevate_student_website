@@ -1,9 +1,58 @@
-import { periodComparison } from '../../data/mockData';
+import { useStudentTimeline } from '../../controllers/studentController';
+import { periodComparison as mockPeriodComparison } from '../../data/mockData';
 import { getScoreBg } from '../../utils/helpers';
 
 const CATS = ['Overall', 'Aptitude', 'Technical', 'Behavioral', 'Communication'];
 
+// Build period comparison from timeline data.
+// Timeline returns [{ semester_label, overall_index, aptitude_score, technical_score, behavioral_score, communication_score }]
+function derivePeriods(apiData) {
+  if (!Array.isArray(apiData) || apiData.length === 0) return null;
+  const tl = apiData;
+  const pick = (entry) => ({
+    Overall:       Math.round(parseFloat(entry.overall_index      ?? entry.Overall      ?? 0)),
+    Aptitude:      Math.round(parseFloat(entry.aptitude_score     ?? entry.Aptitude     ?? 0)),
+    Technical:     Math.round(parseFloat(entry.technical_score    ?? entry.Technical    ?? 0)),
+    Behavioral:    Math.round(parseFloat(entry.behavioral_score   ?? entry.Behavioral   ?? 0)),
+    Communication: Math.round(parseFloat(entry.communication_score ?? entry.Communication ?? 0)),
+  });
+
+  const periods = [];
+  if (tl.length >= 3) {
+    const start = tl[0];
+    periods.push({
+      label:   start.semester_label ?? start.semester ?? 'Start',
+      date:    start.created_at ? new Date(start.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '',
+      current: false,
+      scores:  pick(start),
+    });
+    const mid = tl[Math.floor(tl.length / 2)];
+    periods.push({
+      label:   mid.semester_label ?? mid.semester ?? 'Mid',
+      date:    mid.created_at ? new Date(mid.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '',
+      current: false,
+      scores:  pick(mid),
+    });
+  }
+  const latest = tl[tl.length - 1];
+  periods.push({
+    label:   latest.semester_label ?? latest.semester ?? 'Current',
+    date:    latest.created_at ? new Date(latest.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '',
+    current: true,
+    scores:  pick(latest),
+  });
+  return periods;
+}
+
 export default function PeriodComparison() {
+  const { data: timelineRes, isLoading } = useStudentTimeline();
+
+  const periodComparison = derivePeriods(timelineRes) ?? mockPeriodComparison;
+
+  if (isLoading) {
+    return <div className="card p-6 h-[280px] animate-pulse bg-gray-50" />;
+  }
+
   return (
     <div className="card p-6">
       <h3 className="font-display font-semibold text-base text-gray-800 mb-1">Period-over-Period</h3>

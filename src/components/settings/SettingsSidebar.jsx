@@ -1,24 +1,36 @@
 import { User, Bell, Lock, Sliders, Download } from 'lucide-react';
-import { student } from '../../data/mockData';
+import { useStudentProfile } from '../../controllers/studentController';
+import { useAuth } from '../../context/AuthContext';
+import { student as mockStudent } from '../../data/mockData';
 
 const TABS = [
-  { key: 'profile',       label: 'Profile',       Icon: User    },
-  { key: 'notifications', label: 'Notifications',  Icon: Bell    },
-  { key: 'privacy',       label: 'Privacy',        Icon: Lock    },
-  { key: 'preferences',   label: 'Preferences',    Icon: Sliders },
+  { key: 'profile',       label: 'Profile',        Icon: User    },
+  { key: 'notifications', label: 'Notifications',   Icon: Bell    },
+  { key: 'privacy',       label: 'Privacy',         Icon: Lock    },
+  { key: 'preferences',   label: 'Preferences',     Icon: Sliders },
 ];
 
 export default function SettingsSidebar({ active, onChange }) {
+  const { user: authUser } = useAuth();
+  const { data: profileData } = useStudentProfile();
+
+  const firstName = profileData?.first_name ?? authUser?.first_name ?? mockStudent.firstName;
+  const lastName  = profileData?.last_name  ?? authUser?.last_name  ?? '';
+  const name      = `${firstName} ${lastName}`.trim() || mockStudent.name;
+  const initials  = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase() || mockStudent.initials;
+  const branch    = profileData?.student?.department?.name ?? mockStudent.branch;
+  const studentId = profileData?.student?.enrollment_number ?? mockStudent.id;
+
   return (
     <div className="card p-5 flex flex-col gap-5">
       {/* User */}
       <div className="flex flex-col items-center text-center pb-5 border-b border-gray-100">
         <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-display font-bold text-xl mb-3">
-          {student.initials}
+          {initials}
         </div>
-        <p className="font-display font-bold text-gray-900">{student.name}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{student.branch}</p>
-        <p className="text-xs text-gray-400">{student.id}</p>
+        <p className="font-display font-bold text-gray-900">{name}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{branch}</p>
+        <p className="text-xs text-gray-400">{studentId}</p>
       </div>
 
       {/* Tabs */}
