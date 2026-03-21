@@ -7,16 +7,16 @@ import { getCategoryColor } from '../../utils/helpers';
 import TabGroup from '../common/TabGroup';
 import { useStudentTimeline } from '../../controllers/studentController';
 
-const LINES = ['Overall', 'Technical', 'Aptitude', 'Soft Skills', 'Communication'];
+const LINES = ['Overall', 'Technical', 'Aptitude', 'Behavioral', 'Communication'];
 
 // Transform API response → Recharts format
 const transformTimeline = (data = []) =>
-  data.map((entry, i) => ({
+  data.map((entry) => ({
     semester: new Date(entry.calculated_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
     Overall:       parseFloat(entry.overall_index),
     Technical:     parseFloat(entry.technical_score),
     Aptitude:      parseFloat(entry.aptitude_score),
-    'Soft Skills': parseFloat(entry.soft_skills_score),
+    Behavioral:    parseFloat(entry.behavioral_score),
     Communication: parseFloat(entry.communication_score),
   }));
 

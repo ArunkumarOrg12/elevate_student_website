@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { useAssessmentFlow } from '../context/AssessmentFlowContext';
 import { useAttemptQuestions, useSubmitAttempt } from '../controllers/assessmentsController';
+import LikertQuestion from '../components/assessment/LikertQuestion';
+import DescriptiveQuestion from '../components/assessment/DescriptiveQuestion';
 import {
   removeKeyLock, removeScreenBlock,
 } from '../services/proctorService';
@@ -191,10 +193,16 @@ export default function AssessmentExam() {
     });
 
     // Fire-and-forget: submit to API, store result in context when done
-    // Backend expects index-based format: { answers: { "0": 2, "1": 0 } }
+    // Enrich each answer with question_type so the backend can score correctly
+    const answersWithMeta = Object.fromEntries(
+      Object.entries(answersCopy).map(([idx, val]) => {
+        const qType = questions[parseInt(idx, 10)]?.question_type ?? 'mcq';
+        return [idx, { value: val, question_type: qType }];
+      })
+    );
     if (flow.attemptId) {
       submitAttemptMutation.mutate(
-        { attemptId: flow.attemptId, answers: answersCopy },
+        { attemptId: flow.attemptId, answers: answersWithMeta },
         { onSuccess: (result) => updateFlow({ submitResult: result }) },
       );
     }
@@ -340,6 +348,7 @@ export default function AssessmentExam() {
 
   // ── handlers ──
   function selectOption(idx)  { setLocalAnswers(prev => ({ ...prev, [currentQ]: idx })); }
+  function handleAnswerChange(val) { setLocalAnswers(prev => ({ ...prev, [currentQ]: val })); }
   function toggleFlag()       { setLocalFlagged(prev => prev.includes(currentQ) ? prev.filter(i => i !== currentQ) : [...prev, currentQ]); }
   function prevQ()            { setCurrentQ(q => Math.max(0, q - 1)); }
   function nextQ()            { setCurrentQ(q => Math.min(questions.length - 1, q + 1)); }
@@ -456,44 +465,51 @@ export default function AssessmentExam() {
                   )}
                 </div>
 
-                {/* Options */}
-                <div className="space-y-2.5">
-                  {q.options.map((opt, idx) => {
-                    const sel = selectedOption === idx;
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => selectOption(idx)}
-                        className="w-full flex items-center gap-4 rounded-xl p-4 text-left transition-all duration-150 hover:scale-[1.005]"
-                        style={{
-                          background:   sel ? '#EEF2FF' : '#FFFFFF',
-                          border:       sel ? '2px solid #4F46E5' : '1px solid #E2E8F0',
-                          boxShadow:    sel ? '0 0 0 3px rgba(79,70,229,0.08)' : undefined,
-                        }}
-                      >
-                        <span
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all"
+                {/* Question input — conditional on question_type */}
+                {q.question_type === 'likert' ? (
+                  <LikertQuestion question={q} value={selectedOption} onChange={handleAnswerChange} />
+                ) : q.question_type === 'descriptive' ? (
+                  <DescriptiveQuestion question={q} value={selectedOption} onChange={handleAnswerChange} />
+                ) : (
+                  /* MCQ (default) */
+                  <div className="space-y-2.5">
+                    {q.options.map((opt, idx) => {
+                      const sel = selectedOption === idx;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => selectOption(idx)}
+                          className="w-full flex items-center gap-4 rounded-xl p-4 text-left transition-all duration-150 hover:scale-[1.005]"
                           style={{
-                            background: sel ? '#4F46E5' : '#F1F5F9',
-                            color:      sel ? '#FFF'    : '#64748B',
+                            background:   sel ? '#EEF2FF' : '#FFFFFF',
+                            border:       sel ? '2px solid #4F46E5' : '1px solid #E2E8F0',
+                            boxShadow:    sel ? '0 0 0 3px rgba(79,70,229,0.08)' : undefined,
                           }}
                         >
-                          {LETTERS[idx]}
-                        </span>
-                        <span className="flex flex-col gap-1.5 flex-1 min-w-0">
-                          <span className="text-sm text-gray-700 font-medium">{opt.text}</span>
-                          {opt.image && (
-                            <img
-                              src={opt.image}
-                              alt={`Option ${LETTERS[idx]}`}
-                              className="rounded-lg max-h-28 object-contain border border-gray-100 self-start"
-                            />
-                          )}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all"
+                            style={{
+                              background: sel ? '#4F46E5' : '#F1F5F9',
+                              color:      sel ? '#FFF'    : '#64748B',
+                            }}
+                          >
+                            {LETTERS[idx]}
+                          </span>
+                          <span className="flex flex-col gap-1.5 flex-1 min-w-0">
+                            <span className="text-sm text-gray-700 font-medium">{opt.text}</span>
+                            {opt.image && (
+                              <img
+                                src={opt.image}
+                                alt={`Option ${LETTERS[idx]}`}
+                                className="rounded-lg max-h-28 object-contain border border-gray-100 self-start"
+                              />
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

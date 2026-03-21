@@ -1,5 +1,4 @@
 import { useStudentSkillHeatmap } from '../../controllers/studentController';
-import { skillHeatmap as mockSkillHeatmap } from '../../data/mockData';
 
 function heatColor(v) {
   const t = (v - 30) / 70;
@@ -33,14 +32,23 @@ function transformHeatmap(apiData) {
 }
 
 export default function SkillHeatmap() {
-  const { data: heatmapRes, isLoading } = useStudentSkillHeatmap();
-
-  const heatmap = transformHeatmap(heatmapRes) ?? mockSkillHeatmap;
-  const { categories, semesters, data } = heatmap;
+  const { data: heatmapRes, isLoading, isError } = useStudentSkillHeatmap();
 
   if (isLoading) {
     return <div className="card p-6 h-[280px] animate-pulse bg-gray-50" />;
   }
+
+  const heatmap = transformHeatmap(heatmapRes);
+
+  if (isError || !heatmap) {
+    return (
+      <div className="card p-6 h-[280px] flex items-center justify-center text-sm text-gray-400">
+        Heatmap data unavailable
+      </div>
+    );
+  }
+
+  const { categories, semesters, data } = heatmap;
 
   return (
     <div className="card p-6">
