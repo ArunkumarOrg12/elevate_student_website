@@ -227,8 +227,8 @@ export default function SignIn() {
 
           {/* Register */}
           <p className="signin-register">
-            New student?{' '}
-            <button type="button" className="register-link">Create an account</button>
+            Don't have an account?{' '}
+            <span className="register-link" style={{ cursor: 'default', opacity: 0.8 }}>Contact your college admin</span>
           </p>
         </div>
       </div>
