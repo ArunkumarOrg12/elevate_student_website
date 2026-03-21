@@ -1,5 +1,4 @@
 import { useStudentComparison } from '../../controllers/studentController';
-import { categoryComparison as mockCategoryComparison } from '../../data/mockData';
 
 // Transform backend comparison response into [{ category, you, top10, batch }]
 function transformComparison(apiData) {
@@ -28,12 +27,20 @@ function transformComparison(apiData) {
 }
 
 export default function CategoryComparison() {
-  const { data: comparisonRes, isLoading } = useStudentComparison();
-
-  const categoryComparison = transformComparison(comparisonRes) ?? mockCategoryComparison;
+  const { data: comparisonRes, isLoading, isError } = useStudentComparison();
 
   if (isLoading) {
     return <div className="card p-6 h-[280px] animate-pulse bg-gray-50" />;
+  }
+
+  const categoryComparison = transformComparison(comparisonRes);
+
+  if (isError || !categoryComparison) {
+    return (
+      <div className="card p-6 h-[280px] flex items-center justify-center text-sm text-gray-400">
+        Comparison data unavailable
+      </div>
+    );
   }
 
   return (
