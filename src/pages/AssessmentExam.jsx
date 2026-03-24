@@ -193,16 +193,9 @@ export default function AssessmentExam() {
     });
 
     // Fire-and-forget: submit to API, store result in context when done
-    // Enrich each answer with question_type so the backend can score correctly
-    const answersWithMeta = Object.fromEntries(
-      Object.entries(answersCopy).map(([idx, val]) => {
-        const qType = questions[parseInt(idx, 10)]?.question_type ?? 'mcq';
-        return [idx, { value: val, question_type: qType }];
-      })
-    );
     if (flow.attemptId) {
       submitAttemptMutation.mutate(
-        { attemptId: flow.attemptId, answers: answersWithMeta },
+        { attemptId: flow.attemptId, answers: answersCopy },
         { onSuccess: (result) => updateFlow({ submitResult: result }) },
       );
     }

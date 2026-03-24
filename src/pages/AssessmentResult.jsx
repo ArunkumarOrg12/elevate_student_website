@@ -7,16 +7,20 @@ import {
 import { useAttemptResults } from '../controllers/assessmentsController';
 
 const SECTION_LABELS = {
+  cognitive_ability:   { label: 'Aptitude',      weight: 30 },
+  technical:           { label: 'Technical',     weight: 35 },
+  behavioral_traits:   { label: 'Behavioral',    weight: 20 },
+  communication:       { label: 'Communication', weight: 15 },
+  // legacy / alternate names
   aptitude_score:      { label: 'Aptitude',      weight: 30 },
   technical_score:     { label: 'Technical',     weight: 35 },
   behavioral_score:    { label: 'Behavioral',    weight: 20 },
   communication_score: { label: 'Communication', weight: 15 },
-  // Handle if section_name already contains a display name
-  Aptitude:      { label: 'Aptitude',      weight: 30 },
-  Technical:     { label: 'Technical',     weight: 35 },
-  Behavioral:    { label: 'Behavioral',    weight: 20 },
-  'Soft Skills': { label: 'Behavioral',    weight: 20 },
-  Communication: { label: 'Communication', weight: 15 },
+  Aptitude:            { label: 'Aptitude',      weight: 30 },
+  Technical:           { label: 'Technical',     weight: 35 },
+  Behavioral:          { label: 'Behavioral',    weight: 20 },
+  'Soft Skills':       { label: 'Behavioral',    weight: 20 },
+  Communication:       { label: 'Communication', weight: 15 },
 };
 
 function formatDate(ts) {
@@ -149,10 +153,13 @@ function PendingView({ message, attemptStatus, onBack }) {
 // ── Results view ──────────────────────────────────────────────────────────────
 function ResultsView({ data, onBack }) {
   const navigate = useNavigate();
-  const composite      = data.composite_score;
+  // API returns `score` not `composite_score`; support both for resilience
+  const composite      = data.composite_score ?? data.score ?? null;
   const sectionScores  = data.section_scores ?? [];
   const breakdown      = data.answers_breakdown ?? [];
-  const pct            = composite?.percentage_score != null ? Math.round(composite.percentage_score) : null;
+  // API uses `percentage`; legacy may use `percentage_score`
+  const pctRaw         = composite?.percentage ?? composite?.percentage_score;
+  const pct            = pctRaw != null ? Math.round(pctRaw) : null;
   const color          = scoreColor(pct);
   const circumference  = 2 * Math.PI * 40;
 
@@ -193,9 +200,9 @@ function ResultsView({ data, onBack }) {
         <div className="flex-1 space-y-3 text-center sm:text-left">
           <div>
             <p className="font-display font-bold text-lg text-gray-900">{scoreLabel(pct)}</p>
-            {composite?.total_score != null && (
+            {(composite?.total_correct ?? composite?.total_score) != null && (
               <p className="text-sm text-gray-500 mt-0.5">
-                {composite.total_score} / {composite.max_score} points
+                {composite.total_correct ?? composite.total_score} / {composite.total_questions ?? composite.max_score} correct
               </p>
             )}
           </div>
@@ -221,19 +228,24 @@ function ResultsView({ data, onBack }) {
           <div className="h-px bg-gray-100" />
           <div className="space-y-3">
             {sectionScores.map((sec, i) => {
-              const secPct = sec.percentage_score != null ? Math.round(sec.percentage_score) : null;
+              // API uses `percentage`; legacy may use `percentage_score`
+              const rawPct   = sec.percentage ?? sec.percentage_score;
+              const secPct   = rawPct != null ? Math.round(rawPct) : null;
               const secColor = scoreColor(secPct);
               const sectionInfo = SECTION_LABELS[sec.section_name] ?? SECTION_LABELS[sec.section_key] ?? null;
               const displayName = sectionInfo
                 ? `${sectionInfo.label} (${sectionInfo.weight}%)`
                 : (sec.section_name || `Section ${i + 1}`);
+              // API uses `correct`/`total`; legacy may use `questions_correct`/`questions_attempted`
+              const correct = sec.correct ?? sec.questions_correct;
+              const total   = sec.total   ?? sec.questions_attempted;
               return (
                 <div key={sec.id || i} className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-gray-700">{displayName}</p>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
-                      {sec.questions_correct != null && (
-                        <span>{sec.questions_correct}/{sec.questions_attempted ?? '—'} correct</span>
+                      {correct != null && (
+                        <span>{correct}/{total ?? '—'} correct</span>
                       )}
                       {sec.time_taken_seconds != null && (
                         <span className="flex items-center gap-1">
@@ -295,8 +307,10 @@ function ResultsView({ data, onBack }) {
 
 // ── Answer row ────────────────────────────────────────────────────────────────
 function AnswerRow({ index, item }) {
+  // API uses `selected_option`; legacy may use `student_answer`
+  const studentAnswer = item.selected_option ?? item.student_answer ?? null;
   const isCorrect = item.is_correct === true;
-  const isSkipped = item.student_answer == null || item.student_answer === '';
+  const isSkipped = studentAnswer == null || studentAnswer === '';
   const Icon  = isCorrect ? CheckCircle2 : isSkipped ? MinusCircle : XCircle;
   const color = isCorrect ? '#10B981'    : isSkipped ? '#94A3B8'   : '#EF4444';
   const bg    = isCorrect ? '#ECFDF5'    : isSkipped ? '#F8FAFC'   : '#FEF2F2';
@@ -315,7 +329,7 @@ function AnswerRow({ index, item }) {
           {!isSkipped && (
             <span>
               <span className="text-gray-400">Your answer: </span>
-              <span className="font-semibold" style={{ color }}>{item.student_answer}</span>
+              <span className="font-semibold" style={{ color }}>{studentAnswer}</span>
             </span>
           )}
           {!isCorrect && item.correct_answer != null && (
