@@ -35,9 +35,13 @@ const { data: benchmark            } = useStudentPeerBenchmark();
 const tl         = timeline  ?? [];
 const latest     = tl[tl.length - 1];
 const previous   = tl[tl.length - 2];
-const score      = latest ? Math.round(parseFloat(latest.overall_index)) : 0;
-const growth     = latest && previous
-  ? `+${(parseFloat(latest.overall_index) - parseFloat(previous.overall_index)).toFixed(1)}`
+// Fall back to ei_score when overall_index is null
+const getScore   = (entry) => entry ? parseFloat(entry.overall_index ?? entry.ei_score ?? 0) || 0 : null;
+const latestScore   = getScore(latest);
+const previousScore = getScore(previous);
+const score      = latestScore !== null ? Math.round(latestScore) : 0;
+const growth     = latestScore !== null && previousScore !== null
+  ? `${latestScore >= previousScore ? '+' : ''}${(latestScore - previousScore).toFixed(1)}`
   : '—';
 const percentile = benchmark?.top_percentile
   ? Math.round(parseFloat(benchmark.top_percentile)) : '—';

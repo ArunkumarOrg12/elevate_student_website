@@ -20,20 +20,23 @@ export default function StatsRow() {
   const benchmark = benchmarkRes ?? {};
   const history   = historyRes ?? [];
 
-  // Latest overall index
+  // Latest overall index — fall back to ei_score when overall_index is null
   const latest   = timeline[timeline.length - 1];
   const previous = timeline[timeline.length - 2];
-  const eiScore  = latest ? Math.round(parseFloat(latest.overall_index)) : '—';
-  const eiChange = latest && previous
-    ? `${parseFloat(latest.overall_index) - parseFloat(previous.overall_index) >= 0 ? '+' : ''}${(parseFloat(latest.overall_index) - parseFloat(previous.overall_index)).toFixed(1)}pts`
+  const getScore = (entry) => entry ? parseFloat(entry.overall_index ?? entry.ei_score ?? 0) || 0 : null;
+  const latestScore   = getScore(latest);
+  const previousScore = getScore(previous);
+  const eiScore  = latestScore !== null ? Math.round(latestScore) : '—';
+  const eiChange = latestScore !== null && previousScore !== null
+    ? `${latestScore - previousScore >= 0 ? '+' : ''}${(latestScore - previousScore).toFixed(1)}pts`
     : '—';
 
   // Percentile from benchmark
   const percentile = benchmark.top_percentile ? Math.round(parseFloat(benchmark.top_percentile)) : '—';
 
   // Growth velocity: signed delta between last two entries
-  const rawVelocity = latest && previous
-    ? parseFloat(latest.overall_index) - parseFloat(previous.overall_index)
+  const rawVelocity = latestScore !== null && previousScore !== null
+    ? latestScore - previousScore
     : null;
   const velocityDisplay = rawVelocity === null
     ? 'First Assessment'
