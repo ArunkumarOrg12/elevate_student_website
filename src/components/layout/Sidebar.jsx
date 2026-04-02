@@ -13,7 +13,7 @@ const NAV = [
   { to: '/skill-insights',  label: 'Skill Insights',  Icon: Lightbulb       },
   { to: '/growth-timeline', label: 'Growth Timeline', Icon: TrendingUp      },
   { to: '/recommendations', label: 'Recommendations', Icon: BookOpen        },
-  { to: '/reports',         label: 'Reports',         Icon: FileText        },
+  // { to: '/reports',         label: 'Reports',         Icon: FileText        },
   { to: '/settings',        label: 'Settings',        Icon: Settings        },
 ];
 
@@ -37,21 +37,22 @@ export default function Sidebar({ mobile = false, onClose }) {
       {/* Logo */}
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-700/60 ${col && !mobile ? 'justify-center px-2' : ''}`}>
         <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-900/40">
-          <Zap className="w-5 h-5 text-white" />
+          {/* <Zap className="w-5 h-5 text-white" /> */}
+          <img src="./Logo whitevector.png" alt="logo" />
         </div>
         {(!col || mobile) && (
           <div className="min-w-0">
-            <p className="font-display font-bold text-white text-base leading-none">EmployIQ</p>
-            <p className="text-[9px] text-slate-400 font-semibold tracking-widest uppercase mt-0.5">Intelligence Portal</p>
+            <p className="font-display font-bold text-white text-base leading-none">ELEVATE</p>
+            <p className="text-[9px] text-slate-400 font-semibold tracking-widest uppercase mt-0.5">Student Portal</p>
           </div>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 overflow-y-auto">
-        {(!col || mobile) && (
+      <nav className="flex-1 px-2 overflow-y-auto py-2">
+        {/* {(!col || mobile) && (
           <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest px-3 mb-2">Navigation</p>
-        )}
+        )} */}
         <ul className="space-y-0.5">
           {NAV.map(({ to, label, Icon }) => {
             const active = location.pathname.startsWith(to);
