@@ -111,6 +111,19 @@ export default function MyAssessments() {
     navigate('/assessment/overview');
   }
 
+  function handleViewResult(cycle) {
+    const aid =
+      cycle.attempt?._id      ||
+      cycle.attempt?.id       ||
+      cycle.attempt?.attempt_id ||
+      cycle.attempt_id        ||
+      cycle.attemptId         ||
+      cycle.last_attempt_id;
+    if (aid) {
+      navigate(`/assessment/result/${aid}`);
+    }
+  }
+
   return (
     <div className="page-enter p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <style>{`
@@ -263,7 +276,7 @@ export default function MyAssessments() {
       {!isLoading && !isError && filtered.length > 0 && (
         <div className="space-y-3">
           {filtered.map((cycle, i) => (
-            <CycleCard key={cycle._id || cycle.id || i} cycle={cycle} delay={i * 50} onAttempt={handleAttempt} />
+            <CycleCard key={cycle._id || cycle.id || i} cycle={cycle} delay={i * 50} onAttempt={handleAttempt} onViewResult={handleViewResult} />
           ))}
         </div>
       )}
@@ -272,7 +285,7 @@ export default function MyAssessments() {
 }
 
 // ── CycleCard ─────────────────────────────────────────────────────────────────
-function CycleCard({ cycle, delay, onAttempt }) {
+function CycleCard({ cycle, delay, onAttempt, onViewResult }) {
   // Normalise field names — support both API shape and legacy shape
   const cat         = cycle.category || '';
   const duration    = cycle.duration_minutes ?? cycle.duration;
@@ -378,7 +391,10 @@ function CycleCard({ cycle, delay, onAttempt }) {
             </button>
           )}
           {isCompleted && (
-            <button className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-semibold text-sm whitespace-nowrap">
+            <button
+              onClick={() => onViewResult(cycle)}
+              className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-semibold text-sm whitespace-nowrap"
+            >
               Results <ChevronRight style={{ width: 14, height: 14 }} />
             </button>
           )}

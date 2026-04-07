@@ -3,7 +3,6 @@ import {
   ResponsiveContainer, Cell,
 } from 'recharts';
 import { useStudentAssessmentHistory } from '../../controllers/studentController';
-import { assessmentFrequency as mockFrequency } from '../../data/mockData';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -31,12 +30,20 @@ function deriveFrequency(apiData) {
 }
 
 export default function FrequencyChart() {
-  const { data: historyRes, isLoading } = useStudentAssessmentHistory();
-
-  const chartData = deriveFrequency(historyRes) ?? mockFrequency;
+  const { data: historyRes, isLoading, isError } = useStudentAssessmentHistory();
 
   if (isLoading) {
     return <div className="card p-6 h-[280px] animate-pulse bg-gray-50" />;
+  }
+
+  const chartData = deriveFrequency(historyRes);
+
+  if (isError || !chartData) {
+    return (
+      <div className="card p-6 h-[280px] flex items-center justify-center text-sm text-gray-400">
+        No assessment history available
+      </div>
+    );
   }
 
   return (

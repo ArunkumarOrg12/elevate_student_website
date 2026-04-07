@@ -1,5 +1,4 @@
 import { useStudentTopicMastery } from '../../controllers/studentController';
-import { individualSkills as mockSkills } from '../../data/mockData';
 import { getScoreColor } from '../../utils/helpers';
 
 // Transform backend topic-mastery response: [{ section_name, percentage_score }]
@@ -17,12 +16,20 @@ function transformSkills(apiData) {
 }
 
 export default function SkillScoresGrid() {
-  const { data: masteryRes, isLoading } = useStudentTopicMastery();
-
-  const skills = transformSkills(masteryRes) ?? mockSkills;
+  const { data: masteryRes, isLoading, isError } = useStudentTopicMastery();
 
   if (isLoading) {
     return <div className="card p-6 h-40 animate-pulse bg-gray-50" />;
+  }
+
+  const skills = transformSkills(masteryRes);
+
+  if (isError || !skills) {
+    return (
+      <div className="card p-6 h-40 flex items-center justify-center text-sm text-gray-400">
+        Skill scores unavailable
+      </div>
+    );
   }
 
   return (

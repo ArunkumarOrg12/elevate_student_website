@@ -16,6 +16,7 @@ import AssessmentOverview from './pages/AssessmentOverview';
 import AssessmentSecurityCheck from './pages/AssessmentSecurityCheck';
 import AssessmentExam from './pages/AssessmentExam';
 import AssessmentComplete from './pages/AssessmentComplete';
+import AssessmentResult from './pages/AssessmentResult';
 
 // Blocks unauthenticated access; shows nothing while session restore is in-flight
 function ProtectedRoute({ children }) {
@@ -57,6 +58,7 @@ export default function App() {
             <Route path="assessment/security-check" element={<AssessmentSecurityCheck />} />
             <Route path="assessment/exam"           element={<AssessmentExam />} />
             <Route path="assessment/complete"       element={<AssessmentComplete />} />
+            <Route path="assessment/result/:attemptId" element={<AssessmentResult />} />
           </Route>
         </Routes>
       </AuthProvider>

@@ -7,17 +7,25 @@ import { getCategoryColor } from '../../utils/helpers';
 import TabGroup from '../common/TabGroup';
 import { useStudentTimeline } from '../../controllers/studentController';
 
-const LINES = ['Overall', 'Technical', 'Aptitude', 'Soft Skills', 'Communication'];
+const LINES = ['Overall', 'Technical', 'Aptitude', 'Behavioral', 'Communication'];
 
 // Transform API response → Recharts format
+// Handles nulls: calculated_at → percentile_recalculated_at → created_at
+//                overall_index → ei_score → 0
+const formatDate = (entry) => {
+  const raw = entry.calculated_at ?? entry.percentile_recalculated_at ?? entry.created_at;
+  if (!raw) return 'N/A';
+  return new Date(raw).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+};
+
 const transformTimeline = (data = []) =>
-  data.map((entry, i) => ({
-    semester: new Date(entry.calculated_at).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-    Overall:       parseFloat(entry.overall_index),
-    Technical:     parseFloat(entry.technical_score),
-    Aptitude:      parseFloat(entry.aptitude_score),
-    'Soft Skills': parseFloat(entry.soft_skills_score),
-    Communication: parseFloat(entry.communication_score),
+  data.map((entry) => ({
+    semester:      formatDate(entry),
+    Overall:       parseFloat(entry.overall_index ?? entry.ei_score ?? 0) || 0,
+    Technical:     parseFloat(entry.technical_score ?? 0) || 0,
+    Aptitude:      parseFloat(entry.aptitude_score ?? 0) || 0,
+    Behavioral:    parseFloat(entry.behavioral_score ?? 0) || 0,
+    Communication: parseFloat(entry.communication_score ?? 0) || 0,
   }));
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -75,7 +83,7 @@ export default function ProgressTimeline() {
               tickLine={false}
             />
             <YAxis
-              domain={[30, 100]}
+              domain={[0, 100]}
               tick={{ fontSize: 11, fill: '#94A3B8' }}
               axisLine={false}
               tickLine={false}

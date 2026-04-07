@@ -50,11 +50,12 @@ export default function SignIn() {
         {/* Logo */}
         <div className="signin-logo">
           <div className="signin-logo-icon">
-            <Zap className="zap-icon" />
+            {/* <Zap className="zap-icon" /> */}
+            <img src="./Logo whitevector.png" alt="logo" />
           </div>
           <div>
-            <p className="signin-brand">EmployIQ</p>
-            <p className="signin-tagline-small">Intelligence Portal</p>
+            <p className="signin-brand">ELEVATE</p>
+            <p className="signin-tagline-small">Student Portal</p>
           </div>
         </div>
 
@@ -227,8 +228,8 @@ export default function SignIn() {
 
           {/* Register */}
           <p className="signin-register">
-            New student?{' '}
-            <button type="button" className="register-link">Create an account</button>
+            Don't have an account?{' '}
+            <span className="register-link" style={{ cursor: 'default', opacity: 0.8 }}>Contact your college admin</span>
           </p>
         </div>
       </div>

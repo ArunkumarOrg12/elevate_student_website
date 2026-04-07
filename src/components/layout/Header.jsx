@@ -3,6 +3,7 @@ import { Menu, Bell, ChevronDown, Check, CheckCheck, Inbox, Trash2, X } from 'lu
 import { useSidebar } from '../../context/SidebarContext';
 import { useAuth } from '../../context/AuthContext';
 import { student } from '../../data/mockData';
+import { useStudentProfile } from '../../controllers/studentController';
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -12,6 +13,14 @@ import {
 } from '../../controllers/notificationController';
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
+function deriveYear(batchYear) {
+  if (!batchYear) return null;
+  const diff = new Date().getFullYear() - batchYear + 1;
+  if (diff >= 4) return 'Final Year';
+  const labels = ['', '1st Year', '2nd Year', '3rd Year'];
+  return labels[diff] ?? 'Final Year';
+}
+
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -207,14 +216,19 @@ export default function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
   const bellRef = useRef(null);
 
-  // Derive display values from real auth user; fall back to mock while offline
-  const displayUser = authUser
-    ? {
-        initials: `${authUser.first_name?.[0] ?? ''}${authUser.last_name?.[0] ?? ''}`.toUpperCase(),
-        name: `${authUser.first_name ?? ''} ${authUser.last_name ?? ''}`.trim(),
-        year: student.year,
-      }
-    : { initials: student.initials, name: student.name, year: student.year };
+  const { data: profileData } = useStudentProfile();
+
+  // Prefer backend profile data → auth user → mock fallback
+  const firstName = profileData?.first_name ?? authUser?.first_name ?? '';
+  const lastName  = profileData?.last_name  ?? authUser?.last_name  ?? '';
+  const batchYear = profileData?.student?.batch_year;
+  const displayUser = {
+    initials: (firstName || lastName)
+      ? `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase()
+      : student.initials,
+    name: `${firstName} ${lastName}`.trim() || student.name,
+    year: deriveYear(batchYear) ?? student.year,
+  };
 
   // Fetch notifications to drive the unread badge count
   const { data } = useNotifications({ refetchInterval: 60_000 });
